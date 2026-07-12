@@ -103,13 +103,19 @@ const CasesAdmin = () => {
       form.append('pdf', fileInputRef.current.files[0]);
     }
 
-    if (editingId) {
-      await updateCase(editingId, form);
-    } else {
-      await addCase(form);
+    try {
+      if (editingId) {
+        await updateCase(editingId, form);
+      } else {
+        await addCase(form);
+      }
+      
+      // Сбрасываем форму только после успешного сохранения
+      handleCancelEdit();
+    } catch (error) {
+      console.error('Failed to save case:', error);
+      alert('Произошла ошибка при сохранении дела. Пожалуйста, попробуйте еще раз.');
     }
-    
-    handleCancelEdit();
   };
 
   return (
