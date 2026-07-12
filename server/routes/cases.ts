@@ -23,7 +23,7 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ 
+const upload = multer({
   storage: storage,
   fileFilter: (req, file, cb) => {
     if (file.mimetype === 'application/pdf') {
@@ -34,6 +34,20 @@ const upload = multer({
   },
   limits: { fileSize: 20 * 1024 * 1024 } // 20 MB limit
 });
+
+// Multer error handler для понятных сообщений на русском
+function handleMulterError(err: any, _req: express.Request, res: express.Response, next: express.NextFunction) {
+  if (err && err.name === 'MulterError') {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({ error: 'Файл превышает максимально допустимый размер 20 МБ' });
+    }
+    return res.status(413).json({ error: 'Ошибка загрузки файла: ' + (err.message || err.code) });
+  }
+  if (err && err.message && err.message.includes('Только PDF')) {
+    return res.status(400).json({ error: err.message });
+  }
+  next(err);
+}
 
 // Получить все дела (Публичный доступ)
 router.get('/', async (req, res) => {
@@ -53,10 +67,10 @@ router.get('/', async (req, res) => {
 });
 
 // Добавить новое дело (Только для авторизованных)
-router.post('/', authenticateToken, upload.single('pdf'), async (req, res) => {
+router.post('/', authenticateToken, upload.single('pdf'), handleMulterError, async (req, res) => {
   try {
     const { title, description, category, challenges, outcome, color } = req.body;
-    
+
     const newCase = await prisma.case.create({
       data: {
         title,
