@@ -4,7 +4,7 @@ import { Plus, Trash2, Upload, FileText, Edit2, X, Wand2, Undo, Loader2 } from '
 import { API_URL } from '../../config';
 
 const CasesAdmin = () => {
-  const { cases, addCase, updateCase, deleteCase } = useCases();
+  const { cases, addCase, updateCase, deleteCase, refreshCases } = useCases();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -166,6 +166,10 @@ const CasesAdmin = () => {
       } else {
         await addCase(form);
       }
+
+      // Принудительно синхронизируемся с сервером, чтобы избежать
+      // рассинхрона между админкой и публичной частью сайта
+      await refreshCases();
       
       // Сбрасываем форму только после успешного сохранения
       handleCancelEdit();
