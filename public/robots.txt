@@ -1,0 +1,9 @@
+User-agent: *
+Disallow: /admin
+Disallow: /login
+Disallow: /api/
+
+Allow: /
+Allow: /blog
+
+Sitemap: https://advokat-tuapse.ru/api/sitemap.xml

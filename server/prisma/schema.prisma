@@ -1,0 +1,45 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Admin {
+  id       String @id @default(uuid())
+  username String @unique
+  password String
+}
+
+model Case {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  category    String
+  challenges  String   // JSON stringified array
+  outcome     String
+  color       String
+  pdfUrl      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Post {
+  id              String    @id @default(uuid())
+  title           String
+  slug            String    @unique
+  previewText     String
+  content         String
+  category        String    // "Отраслевые новости" | "Наши дела"
+  tags            String    // JSON stringified array
+  author          String
+  thumbnailUrl    String?
+  status          String    @default("DRAFT") // "DRAFT" | "PUBLISHED"
+  publishedAt     DateTime?
+  metaTitle       String?
+  metaDescription String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
