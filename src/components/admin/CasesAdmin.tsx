@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useCases, Case } from '../../store/useCases';
-import { Plus, Trash2, Upload, FileText, Edit2, X } from 'lucide-react';
+import { Plus, Trash2, Upload, FileText, Edit2, X, Wand2, Undo, Loader2 } from 'lucide-react';
+import { API_URL } from '../../config';
 
 const CasesAdmin = () => {
   const { cases, addCase, updateCase, deleteCase } = useCases();
@@ -20,6 +21,62 @@ const CasesAdmin = () => {
   const [formData, setFormData] = useState<Partial<Case>>(initialFormState);
   const [challengeInput, setChallengeInput] = useState('');
   const [pdfFileName, setPdfFileName] = useState('');
+
+  const [isOptimizingDesc, setIsOptimizingDesc] = useState(false);
+  const [undoDesc, setUndoDesc] = useState<string | null>(null);
+
+  const [isOptimizingOutcome, setIsOptimizingOutcome] = useState(false);
+  const [undoOutcome, setUndoOutcome] = useState<string | null>(null);
+
+  const optimizeText = async (field: 'description' | 'outcome') => {
+    const text = formData[field];
+    if (!text) {
+      alert('Пожалуйста, введите текст для оптимизации');
+      return;
+    }
+
+    if (field === 'description') setIsOptimizingDesc(true);
+    if (field === 'outcome') setIsOptimizingOutcome(true);
+
+    try {
+      const response = await fetch(`${API_URL}/ai/optimize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+        credentials: 'include'
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.optimizedText) {
+        if (field === 'description') {
+          setUndoDesc(text);
+        } else {
+          setUndoOutcome(text);
+        }
+        setFormData(prev => ({ ...prev, [field]: data.optimizedText }));
+      } else {
+        alert(data.error || 'Ошибка при оптимизации текста');
+      }
+    } catch (error) {
+      console.error('AI optimization failed:', error);
+      alert('Ошибка соединения с сервером при оптимизации текста');
+    } finally {
+      if (field === 'description') setIsOptimizingDesc(false);
+      if (field === 'outcome') setIsOptimizingOutcome(false);
+    }
+  };
+
+  const handleUndo = (field: 'description' | 'outcome') => {
+    if (field === 'description' && undoDesc !== null) {
+      setFormData(prev => ({ ...prev, description: undoDesc }));
+      setUndoDesc(null);
+    }
+    if (field === 'outcome' && undoOutcome !== null) {
+      setFormData(prev => ({ ...prev, outcome: undoOutcome }));
+      setUndoOutcome(null);
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -149,12 +206,56 @@ const CasesAdmin = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Краткое описание</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-sm font-medium text-slate-700">Краткое описание</label>
+              <div className="flex gap-2">
+                {undoDesc !== null && (
+                  <button 
+                    type="button" 
+                    onClick={() => handleUndo('description')}
+                    className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 transition-colors"
+                  >
+                    <Undo className="w-3 h-3" /> Отменить ИИ
+                  </button>
+                )}
+                <button 
+                  type="button" 
+                  onClick={() => optimizeText('description')}
+                  disabled={isOptimizingDesc || !formData.description}
+                  className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-700 font-medium transition-colors disabled:opacity-50"
+                >
+                  {isOptimizingDesc ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
+                  Оптимизировать с ИИ
+                </button>
+              </div>
+            </div>
             <textarea name="description" value={formData.description} onChange={handleInputChange} rows={3} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"></textarea>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Подробный итог</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-sm font-medium text-slate-700">Подробный итог</label>
+              <div className="flex gap-2">
+                {undoOutcome !== null && (
+                  <button 
+                    type="button" 
+                    onClick={() => handleUndo('outcome')}
+                    className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 transition-colors"
+                  >
+                    <Undo className="w-3 h-3" /> Отменить ИИ
+                  </button>
+                )}
+                <button 
+                  type="button" 
+                  onClick={() => optimizeText('outcome')}
+                  disabled={isOptimizingOutcome || !formData.outcome}
+                  className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-700 font-medium transition-colors disabled:opacity-50"
+                >
+                  {isOptimizingOutcome ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
+                  Оптимизировать с ИИ
+                </button>
+              </div>
+            </div>
             <textarea name="outcome" value={formData.outcome} onChange={handleInputChange} rows={2} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"></textarea>
           </div>
 

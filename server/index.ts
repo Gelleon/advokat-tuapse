@@ -5,6 +5,8 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth';
 import casesRoutes from './routes/cases';
 import postsRoutes from './routes/posts';
+import settingsRoutes from './routes/settings';
+import aiRoutes from './routes/ai';
 import path from 'path';
 import { PrismaClient } from '@prisma/client';
 
@@ -47,6 +49,8 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/api/auth', authRoutes);
 app.use('/api/cases', casesRoutes);
 app.use('/api/posts', postsRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Dynamic Sitemap Endpoint
 app.get('/api/sitemap.xml', async (req, res) => {

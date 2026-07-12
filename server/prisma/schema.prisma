@@ -26,6 +26,11 @@ model Case {
   updatedAt   DateTime @updatedAt
 }
 
+model Setting {
+  key   String @id
+  value String
+}
+
 model Post {
   id              String    @id @default(uuid())
   title           String

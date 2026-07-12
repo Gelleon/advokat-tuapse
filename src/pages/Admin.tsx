@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { ArrowLeft, LogOut, Briefcase, FileText } from 'lucide-react';
+import { ArrowLeft, LogOut, Briefcase, FileText, Settings } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import CasesAdmin from '../components/admin/CasesAdmin';
 import BlogAdmin from '../components/admin/BlogAdmin';
+import SettingsAdmin from '../components/admin/SettingsAdmin';
 import { API_URL } from '../config';
 
 const Admin = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'cases' | 'blog'>('cases');
+  const [activeTab, setActiveTab] = useState<'cases' | 'blog' | 'settings'>('cases');
 
   const handleLogout = async () => {
     try {
@@ -62,9 +63,22 @@ const Admin = () => {
             <FileText className="w-4 h-4" />
             Блог (Новости)
           </button>
+          <button
+            onClick={() => setActiveTab('settings')}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              activeTab === 'settings' 
+                ? 'bg-white text-slate-900 shadow-sm' 
+                : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+            }`}
+          >
+            <Settings className="w-4 h-4" />
+            Настройки
+          </button>
         </div>
 
-        {activeTab === 'cases' ? <CasesAdmin /> : <BlogAdmin />}
+        {activeTab === 'cases' && <CasesAdmin />}
+        {activeTab === 'blog' && <BlogAdmin />}
+        {activeTab === 'settings' && <SettingsAdmin />}
       </div>
     </div>
   );
