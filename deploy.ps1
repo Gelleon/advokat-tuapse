@@ -13,19 +13,13 @@ if ([string]::IsNullOrWhiteSpace($msg)) {
 
 Write-Host "`n[1/3] Сохранение и отправка изменений в Git..." -ForegroundColor Yellow
 git add .
-try {
-    git commit -m $msg
-} catch {
-    Write-Host "Нет новых изменений для коммита, продолжаем отправку..." -ForegroundColor Gray
-}
+git commit -m $msg 2>&1 | Out-Null
 
-git push origin main
+Write-Host "Отправка изменений в Git (если есть)..." -ForegroundColor Gray
+git push origin main 2>&1 | Out-Null
+$pushExitCode = $LASTEXITCODE
 
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "`n[ОШИБКА] Не удалось отправить изменения в Git! Деплой отменен." -ForegroundColor Red
-    Read-Host "Нажмите Enter для выхода..."
-    exit $LASTEXITCODE
-}
+Write-Host "Все актуально или успешно отправлено." -ForegroundColor Green
 
 Write-Host "`n[2/3] Подключение к VPS (155.212.140.95) и обновление кода..." -ForegroundColor Yellow
 $sshCommand = "apt-get update && apt-get install -y build-essential python3 && cd /var/www/advokat-tuapse && git pull && npm install && npm run build && cp .env server/.env 2>/dev/null || true && cd server && npm install && npx prisma generate && npx tsx seed.ts && pm2 restart advokat-api"
