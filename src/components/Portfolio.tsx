@@ -87,10 +87,10 @@ const Portfolio = () => {
                       e.stopPropagation();
                       window.open(`${BASE_URL}${caseItem.pdfUrl}`, '_blank', 'noopener,noreferrer');
                     }}
-                    className="p-1 -mr-1 hover:bg-surface-dark rounded-sm transition-colors group/pdf"
+                    className="p-1 -mr-2 hover:bg-surface-dark rounded-sm transition-colors group/pdf"
                     title="Посмотреть документ"
                   >
-                    <svg viewBox="0 0 48 48" className="w-8 h-8 transition-transform group-hover/pdf:scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <svg viewBox="0 0 48 48" className="w-10 h-10 transition-transform group-hover/pdf:scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M38 14L28 4H12C10.8954 4 10 4.89543 10 6V42C10 43.1046 10.8954 44 12 44H36C37.1046 44 38 43.1046 38 42V14Z" fill="#E53935"/>
                       <path d="M28 4V14H38L28 4Z" fill="#EF5350"/>
                       <text x="24" y="33" fill="white" fontSize="13" fontWeight="900" fontFamily="Arial, sans-serif" textAnchor="middle">PDF</text>
@@ -164,7 +164,7 @@ const Portfolio = () => {
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-3 bg-primary text-white hover:bg-primary-light px-6 py-4 rounded-sm font-medium tracking-wider uppercase text-sm transition-colors group/pdf-btn"
                   >
-                    <svg viewBox="0 0 48 48" className="w-6 h-6 transition-transform group-hover/pdf-btn:scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <svg viewBox="0 0 48 48" className="w-8 h-8 transition-transform group-hover/pdf-btn:scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M38 14L28 4H12C10.8954 4 10 4.89543 10 6V42C10 43.1046 10.8954 44 12 44H36C37.1046 44 38 43.1046 38 42V14Z" fill="#E53935"/>
                       <path d="M28 4V14H38L28 4Z" fill="#EF5350"/>
                       <text x="24" y="33" fill="white" fontSize="13" fontWeight="900" fontFamily="Arial, sans-serif" textAnchor="middle">PDF</text>
