@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { usePosts } from '../store/usePosts';
 import { ArrowRight } from 'lucide-react';
+import { BASE_URL } from '../config';
 
 const LatestPosts = () => {
   const { posts } = usePosts();
@@ -42,7 +43,7 @@ const LatestPosts = () => {
               <div className="aspect-[4/3] bg-surface-dark overflow-hidden relative">
                 {post.thumbnailUrl ? (
                   <img 
-                    src={`http://localhost:5000${post.thumbnailUrl}`} 
+                    src={`${BASE_URL}${post.thumbnailUrl}`} 
                     alt={`Иллюстрация к статье: ${post.title}`} 
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
                   />

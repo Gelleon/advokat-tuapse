@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { Search } from 'lucide-react';
+import { BASE_URL } from '../config';
 
 const Blog = () => {
   const { posts } = usePosts(); // fetches only published posts
@@ -90,7 +91,7 @@ const Blog = () => {
                 <Link to={`/blog/${post.slug}`} key={post.id} className="group bg-white rounded-sm overflow-hidden shadow-premium hover:shadow-premium-hover transition-all duration-500 flex flex-col h-full border border-transparent hover:border-secondary">
                   <div className="aspect-[4/3] bg-surface-dark overflow-hidden relative">
                     {post.thumbnailUrl ? (
-                      <img src={`http://localhost:5000${post.thumbnailUrl}`} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                      <img src={`${BASE_URL}${post.thumbnailUrl}`} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-primary/30 font-light">
                         Нет изображения

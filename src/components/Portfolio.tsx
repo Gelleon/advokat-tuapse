@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Eye, ChevronRight, ChevronLeft, FileText } from 'lucide-react';
 import { useCases, Case } from '../store/useCases';
+import { BASE_URL } from '../config';
 
 const Portfolio = () => {
   const { cases } = useCases();
@@ -140,7 +141,7 @@ const Portfolio = () => {
               {selectedCase.pdfUrl && (
                 <div className="pt-8 border-t border-surface-dark">
                   <a 
-                    href={`http://localhost:5000${selectedCase.pdfUrl}`} 
+                    href={`${BASE_URL}${selectedCase.pdfUrl}`} 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-3 bg-primary text-white hover:bg-primary-light px-6 py-4 rounded-sm font-medium tracking-wider uppercase text-sm transition-colors"

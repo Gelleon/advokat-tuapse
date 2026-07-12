@@ -3,6 +3,7 @@ import { ArrowLeft, LogOut, Briefcase, FileText } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import CasesAdmin from '../components/admin/CasesAdmin';
 import BlogAdmin from '../components/admin/BlogAdmin';
+import { API_URL } from '../config';
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -10,7 +11,7 @@ const Admin = () => {
 
   const handleLogout = async () => {
     try {
-      await fetch('http://localhost:5000/api/auth/logout', { method: 'POST', credentials: 'include' });
+      await fetch(`${API_URL}/auth/logout`, { method: 'POST', credentials: 'include' });
       sessionStorage.removeItem('isAdminAuth');
       navigate('/login');
     } catch (error) {

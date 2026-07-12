@@ -5,6 +5,7 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { ArrowLeft, Share2, Facebook, Twitter, Linkedin } from 'lucide-react';
 import { Post } from '../store/usePosts';
+import { API_URL, BASE_URL } from '../config';
 
 const BlogPost = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -15,13 +16,13 @@ const BlogPost = () => {
   useEffect(() => {
     const fetchPost = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/posts/${slug}`);
+        const response = await fetch(`${API_URL}/posts/${slug}`);
         if (response.ok) {
           const data = await response.json();
           setPost(data);
           
           // Fetch related posts (same category)
-          const allResponse = await fetch(`http://localhost:5000/api/posts`);
+          const allResponse = await fetch(`${API_URL}/posts`);
           if (allResponse.ok) {
             const allPosts: Post[] = await allResponse.json();
             const related = allPosts.filter(p => p.category === data.category && p.id !== data.id).slice(0, 3);
@@ -50,7 +51,7 @@ const BlogPost = () => {
         <meta name="description" content={post.metaDescription || post.previewText} />
         <meta property="og:title" content={post.metaTitle || post.title} />
         <meta property="og:description" content={post.metaDescription || post.previewText} />
-        {post.thumbnailUrl && <meta property="og:image" content={`http://localhost:5000${post.thumbnailUrl}`} />}
+        {post.thumbnailUrl && <meta property="og:image" content={`${BASE_URL}${post.thumbnailUrl}`} />}
         <meta property="og:type" content="article" />
       </Helmet>
       <Header />
@@ -63,7 +64,7 @@ const BlogPost = () => {
 
           <article className="bg-white rounded-sm shadow-premium border border-surface-dark overflow-hidden">
             {post.thumbnailUrl && (
-              <img src={`http://localhost:5000${post.thumbnailUrl}`} alt={post.title} className="w-full h-[500px] object-cover" />
+              <img src={`${BASE_URL}${post.thumbnailUrl}`} alt={post.title} className="w-full h-[500px] object-cover" />
             )}
             
             <div className="p-10 md:p-16">
@@ -122,7 +123,7 @@ const BlogPost = () => {
                   <Link to={`/blog/${rp.slug}`} key={rp.id} className="group bg-white rounded-sm overflow-hidden shadow-premium border border-transparent hover:border-secondary transition-all flex flex-col h-full">
                     {rp.thumbnailUrl && (
                       <div className="aspect-[4/3] bg-surface-dark overflow-hidden">
-                        <img src={`http://localhost:5000${rp.thumbnailUrl}`} alt={rp.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                        <img src={`${BASE_URL}${rp.thumbnailUrl}`} alt={rp.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                       </div>
                     )}
                     <div className="p-6 flex flex-col flex-grow">

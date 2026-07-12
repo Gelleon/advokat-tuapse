@@ -25,3 +25,8 @@ dist-ssr
 .env
 
 /src/generated/prisma
+*.pdf
+
+# Скрипты деплоя
+deploy.bat
+deploy.ps1
