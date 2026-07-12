@@ -1,20 +1,28 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const prisma = new PrismaClient();
 
 async function main() {
-  const hashedPassword = await bcrypt.hash('admin123', 10);
+  const adminUsername = process.env.ADMIN_USERNAME || 'admin';
+  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
   
-  await prisma.admin.upsert({
-    where: { username: 'admin' },
-    update: {},
-    create: {
-      username: 'admin',
+  const hashedPassword = await bcrypt.hash(adminPassword, 10);
+  
+  // Удаляем старых пользователей, чтобы оставался только один актуальный админ
+  await prisma.admin.deleteMany();
+  
+  await prisma.admin.create({
+    data: {
+      username: adminUsername,
       password: hashedPassword,
     },
   });
-  console.log('Admin user seeded');
+  
+  console.log(`Admin user '${adminUsername}' seeded/updated successfully`);
 }
 
 main()
