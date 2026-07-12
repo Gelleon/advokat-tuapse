@@ -30,3 +30,4 @@ dist-ssr
 # Скрипты деплоя
 deploy.bat
 deploy.ps1
+.env.example
