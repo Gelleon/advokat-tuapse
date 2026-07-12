@@ -46,6 +46,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 function App() {
   return (
     <BrowserRouter>
+      <CasesProvider>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/blog" element={<Blog />} />
@@ -59,6 +60,7 @@ function App() {
             </ProtectedRoute>
           } />
         </Routes>
+      </CasesProvider>
       </BrowserRouter>
   );
 }
