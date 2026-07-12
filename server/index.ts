@@ -40,7 +40,7 @@ app.use(cors({
   },
   credentials: true, // Allow cookies
 }));
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '25mb' }));
 app.use(cookieParser());
 
 // Serve uploaded PDFs statically

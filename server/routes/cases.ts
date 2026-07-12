@@ -32,7 +32,7 @@ const upload = multer({
       cb(new Error('Только PDF файлы разрешены'));
     }
   },
-  limits: { fileSize: 10 * 1024 * 1024 } // 10 MB limit
+  limits: { fileSize: 20 * 1024 * 1024 } // 20 MB limit
 });
 
 // Получить все дела (Публичный доступ)
@@ -80,7 +80,7 @@ router.post('/', authenticateToken, upload.single('pdf'), async (req, res) => {
 });
 
 // Обновить дело (Только для авторизованных)
-router.put('/:id', authenticateToken, upload.single('pdf'), async (req, res) => {
+router.put('/:id', authenticateToken, upload.single('pdf'), handleMulterError, async (req, res) => {
   try {
     const { id } = req.params;
     const { title, description, category, challenges, outcome, color } = req.body;
