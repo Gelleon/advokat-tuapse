@@ -76,9 +76,23 @@ const Portfolio = () => {
                 {caseItem.description}
               </p>
 
-              <div className="flex items-center text-primary text-sm font-medium tracking-wider uppercase group-hover:text-secondary transition-colors mt-auto pt-6 border-t border-primary/10">
-                <span>Изучить дело</span>
-                <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" strokeWidth={2} />
+              <div className="flex items-center justify-between text-primary text-sm font-medium tracking-wider uppercase group-hover:text-secondary transition-colors mt-auto pt-6 border-t border-primary/10">
+                <div className="flex items-center">
+                  <span>Изучить дело</span>
+                  <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" strokeWidth={2} />
+                </div>
+                {caseItem.pdfUrl && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.open(`${BASE_URL}${caseItem.pdfUrl}`, '_blank', 'noopener,noreferrer');
+                    }}
+                    className="p-2 -mr-2 hover:bg-surface-dark rounded-full transition-colors group/pdf"
+                    title="Посмотреть документ"
+                  >
+                    <FileText className="w-5 h-5 text-primary/50 group-hover/pdf:text-secondary transition-colors" strokeWidth={1.5} />
+                  </button>
+                )}
               </div>
             </div>
           ))}
