@@ -10,14 +10,32 @@ if "%msg%"=="" set msg="Auto update"
 echo.
 echo [1/3] Committing and pushing to Git...
 git add .
-git commit -m "%msg%"
-git push origin main
-
+git commit -m %msg%
 if %errorlevel% neq 0 (
-    echo.
-    echo [ERROR] Git push failed! Deploy cancelled.
-    pause
-    exit /b %errorlevel%
+    :: Error level 1 usually means "nothing to commit" which is fine if we just want to deploy
+    if %errorlevel% neq 1 (
+        echo.
+        echo [ERROR] Git push failed! Deploy cancelled.
+        pause
+        exit /b %errorlevel%
+    ) else (
+        echo No new changes to commit. Proceeding with push...
+        git push origin main
+        if %errorlevel% neq 0 (
+            echo.
+            echo [ERROR] Git push failed! Deploy cancelled.
+            pause
+            exit /b %errorlevel%
+        )
+    )
+) else (
+    git push origin main
+    if %errorlevel% neq 0 (
+        echo.
+        echo [ERROR] Git push failed! Deploy cancelled.
+        pause
+        exit /b %errorlevel%
+    )
 )
 
 echo.

@@ -13,7 +13,12 @@ if ([string]::IsNullOrWhiteSpace($msg)) {
 
 Write-Host "`n[1/3] Сохранение и отправка изменений в Git..." -ForegroundColor Yellow
 git add .
-git commit -m $msg
+try {
+    git commit -m $msg
+} catch {
+    Write-Host "Нет новых изменений для коммита, продолжаем отправку..." -ForegroundColor Gray
+}
+
 git push origin main
 
 if ($LASTEXITCODE -ne 0) {
