@@ -27,8 +27,9 @@ dist-ssr
 /src/generated/prisma
 *.pdf
 
-# Скрипты деплоя
-deploy.bat
+# Скрипты деплоя (только файлы с секретами/опасными операциями)
+# deploy.bat — БЕЗОПАСНЫЙ шаблон деплоя, должен быть в репо
 deploy.ps1
 force-update.ps1
-.env.example
+deploy.env
+deploy.backups
