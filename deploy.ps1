@@ -104,38 +104,50 @@ function Run-ScpFrom {
   }
 }
 
-# Helper: count Case rows on the server via a temp .cjs file.
-# We upload the script with scp into the SERVER project dir (next to node_modules)
-# so require('@prisma/client') resolves without needing 'cd'. Then run it and delete.
+# Helper: count Case rows directly via the SQLite file (avoids any
+# Prisma client generation issues on the server). Falls back to better-sqlite3
+# or sqlite3 CLI if available.
 $SCRIPTS_DIR  = Join-Path $env:TEMP "deploy_scripts_$TS"
 New-Item -ItemType Directory -Path $SCRIPTS_DIR -Force | Out-Null
 $COUNT_SCRIPT_LOCAL  = Join-Path $SCRIPTS_DIR 'count_cases.cjs'
-$COUNT_SCRIPT_REMOTE = "$REMOTE_DIR/server/_deploy_count_$TS.cjs"
+$COUNT_SCRIPT_REMOTE = "$REMOTE_DIR/_deploy_count_$TS.cjs"
 
-# Build the script content as a single string (no here-strings - they fight
-# with the single quotes in require('@prisma/client')). Uses NewLine explicitly.
+# Script: tries to load better-sqlite3 from server's node_modules.
+# If that fails, it tries sqlite3 CLI; if that fails, prints empty -> caller returns -1.
 $nl = [Environment]::NewLine
-$countScriptLines = @(
-  "const { PrismaClient } = require('@prisma/client');"
-  "const p = new PrismaClient();"
-  "(async () => {"
-  "  const n = await p.case.count();"
-  "  process.stdout.write(String(n));"
-  "  await p.`$disconnect();"
-  "})().catch(e => { console.error(e); process.exit(1); });"
-)
-$countScriptContent = ($countScriptLines -join $nl)
+# Build script as a single string with concatenation to keep ASCII content
+# free of PowerShell quote-escaping issues.
+$countScriptContent = @(
+  'const DB_PATH = process.argv[2];'
+  '(async () => {'
+  '  let Database;'
+  '  try { Database = require("/var/www/advokat-tuapse/server/node_modules/better-sqlite3"); } catch (e) {}'
+  '  if (Database) {'
+  '    const db = new Database(DB_PATH, { readonly: true });'
+  '    const row = db.prepare(String.fromCharCode(83,69,76,69,67,84,32,67,79,85,78,84,40,42,41,32,65,83,32,110,32,70,82,79,77,32,34,67,97,115,101,34)).get();'
+  '    process.stdout.write(String(row.n));'
+  '    db.close();'
+  '    return;'
+  '  }'
+  '  const { execSync } = require("child_process");'
+  '  const sql = String.fromCharCode(83,69,76,69,67,84,32,67,79,85,78,84,40,42,41,32,70,82,79,77,32,34,67,97,115,101,34,59);'
+  '  const out = execSync("sqlite3 " + JSON.stringify(DB_PATH) + " " + JSON.stringify(sql), { encoding: "utf8" }).trim();'
+  '  const m = out.match(/^(\d+)/);'
+  '  if (m) process.stdout.write(m[1]);'
+  '})().catch(e => { console.error("COUNT_ERR:" + e.message); process.exit(1); });'
+) -join $nl
 [System.IO.File]::WriteAllText($COUNT_SCRIPT_LOCAL, $countScriptContent, [System.Text.Encoding]::ASCII)
 
 function Get-RemoteCaseCount {
+  $dbRemote = "$REMOTE_DIR/server/prisma/dev.db"
   & scp @SSH_OPTS $COUNT_SCRIPT_LOCAL "${SERVER}:${COUNT_SCRIPT_REMOTE}" 2>&1 | Out-Null
   if ($LASTEXITCODE -ne 0) { return -1 }
 
-  # File lives next to node_modules -> require('@prisma/client') resolves directly
-  $raw = Run-SshQuiet "node '$COUNT_SCRIPT_REMOTE' 2>&1; echo __NODE_RC__\$?"
+  # Pass DB path as argv; no quoting inside ssh command -> no shell escaping issues.
+  $raw = Run-SshQuiet "node '$COUNT_SCRIPT_REMOTE' '$dbRemote' 2>&1; echo __NODE_RC__\$?"
   & ssh @SSH_OPTS $SERVER "rm -f '$COUNT_SCRIPT_REMOTE'" 2>&1 | Out-Null
 
-  $clean = ($raw -replace '__NODE_RC__\d+\s*$', '').Trim()
+  $clean = ($raw -replace '__NODE_RC__\d+\s*$', '' -replace '^COUNT_ERR:.*$', '').Trim()
   if ($clean -match '^\d+$') { return [int]$clean }
 
   if ($clean) {
@@ -198,6 +210,8 @@ Run-Ssh "cd $REMOTE_DIR           && (npm ci --omit=dev 2>/dev/null || npm insta
 Write-Host ''
 Write-Host '=== [5/6] Apply migrations WITHOUT data loss ===' -ForegroundColor Cyan
 Run-Ssh "cd $REMOTE_DIR/server && npx prisma migrate deploy"
+# Make sure the typed client exists so the server actually runs.
+Run-Ssh "cd $REMOTE_DIR/server && npx prisma generate"
 
 # Build + restart
 Run-Ssh "cd $REMOTE_DIR && npm run build"
