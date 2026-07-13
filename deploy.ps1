@@ -81,6 +81,21 @@ function Run-SshQuiet {
   return ($out -join "`n").Trim()
 }
 
+function Run-SshWithRC {
+  param([string]$Cmd)
+  # Run command, capture both stdout and exit code. Returns hashtable.
+  $out = & ssh @SSH_OPTS $SERVER "echo __RC__\$?\necho __OUT__\n$Cmd" 2>&1
+  $text = ($out -join "`n")
+  $rcLine = ($text | Select-String -Pattern '^__RC__-?\d+$' | Select-Object -First 1).Line
+  $stdout = ($text -replace '^__RC__-?\d+\s*', '' -replace '^__OUT__\s*', '')
+  if ($rcLine) {
+    $rc = [int]($rcLine -replace '^__RC__', '')
+  } else {
+    $rc = 0
+  }
+  return @{ RC = $rc; Out = $stdout.Trim() }
+}
+
 function Run-ScpFrom {
   param([string]$RemotePath, [string]$LocalPath)
   & scp @SSH_OPTS "${SERVER}:${RemotePath}" $LocalPath
@@ -96,25 +111,37 @@ New-Item -ItemType Directory -Path $SCRIPTS_DIR -Force | Out-Null
 $COUNT_SCRIPT_LOCAL  = Join-Path $SCRIPTS_DIR 'count_cases.cjs'
 $COUNT_SCRIPT_REMOTE = "/tmp/deploy_count_$TS.cjs"
 
-@'
-const { PrismaClient } = require('@prisma/client');
-const p = new PrismaClient();
-(async () => {
-  const n = await p.case.count();
-  process.stdout.write(String(n));
-  await p.$disconnect();
-})().catch(e => { console.error(e); process.exit(1); });
-'@ | Out-File -FilePath $COUNT_SCRIPT_LOCAL -Encoding ascii -NoNewline
+# Build the script content as a single string (no here-strings - they fight
+# with the single quotes in require('@prisma/client')). Uses NewLine explicitly.
+$nl = [Environment]::NewLine
+$countScriptLines = @(
+  "const { PrismaClient } = require('@prisma/client');"
+  "const p = new PrismaClient();"
+  "(async () => {"
+  "  const n = await p.case.count();"
+  "  process.stdout.write(String(n));"
+  "  await p.`$disconnect();"
+  "})().catch(e => { console.error(e); process.exit(1); });"
+)
+$countScriptContent = ($countScriptLines -join $nl)
+[System.IO.File]::WriteAllText($COUNT_SCRIPT_LOCAL, $countScriptContent, [System.Text.Encoding]::ASCII)
 
 function Get-RemoteCaseCount {
   & scp @SSH_OPTS $COUNT_SCRIPT_LOCAL "${SERVER}:${COUNT_SCRIPT_REMOTE}" 2>&1 | Out-Null
   if ($LASTEXITCODE -ne 0) { return -1 }
 
   # Run from server project dir so require('@prisma/client') resolves
-  $out = Run-SshQuiet "cd $REMOTE_DIR/server && node $COUNT_SCRIPT_REMOTE"
+  $fullCmd = "cd $REMOTE_DIR/server && node $COUNT_SCRIPT_REMOTE 2>&1; echo __NODE_RC__\$?"
+  $raw = Run-SshQuiet $fullCmd
   & ssh @SSH_OPTS $SERVER "rm -f $COUNT_SCRIPT_REMOTE" 2>&1 | Out-Null
 
-  if ($out -match '^\d+$') { return [int]$out }
+  $clean = ($raw -replace '__NODE_RC__\d+\s*$', '').Trim()
+  if ($clean -match '^\d+$') { return [int]$clean }
+
+  if ($clean) {
+    Write-Host ('[count_cases.cjs output on server]:') -ForegroundColor DarkYellow
+    Write-Host $clean -ForegroundColor DarkYellow
+  }
   return -1
 }
 
