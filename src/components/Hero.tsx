@@ -83,9 +83,9 @@ const Hero = () => {
         </div>
       )}
 
-      <div className="relative z-10 text-center px-6 max-w-5xl mx-auto pt-20">
+      <div className="relative z-10 w-full text-center px-4 sm:px-6 max-w-5xl mx-auto pt-20">
         <div className="mb-10 animate-fade-in-up md:max-w-[48rem] mx-auto">
-          <h1 className="text-5xl md:text-6xl font-serif font-bold text-white mb-6 leading-tight tracking-tight">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-serif font-bold text-white mb-6 leading-tight tracking-tight">
             Профессиональная юридическая защита
             <span className="block text-secondary mt-2">
               ваших интересов
@@ -97,10 +97,10 @@ const Hero = () => {
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
+        <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center w-full max-w-md sm:max-w-none mx-auto">
           <button
             onClick={() => setShowConsultationPopup(true)}
-            className="group bg-secondary hover:bg-secondary-light text-primary px-8 py-4 rounded-sm font-semibold tracking-wider uppercase text-sm transition-all duration-300 flex items-center space-x-3"
+            className="group w-full sm:w-auto bg-secondary hover:bg-secondary-light text-primary px-6 sm:px-8 py-4 rounded-sm font-semibold tracking-wider uppercase text-xs sm:text-sm transition-all duration-300 flex items-center justify-center space-x-3"
           >
             <span>Получить консультацию</span>
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" strokeWidth={2} />
@@ -108,7 +108,7 @@ const Hero = () => {
           
           <button 
             onClick={scrollToPortfolio}
-            className="group bg-transparent hover:bg-white/5 text-white border border-white/30 hover:border-white/60 px-8 py-4 rounded-sm font-semibold tracking-wider uppercase text-sm transition-all duration-300"
+            className="group w-full sm:w-auto bg-transparent hover:bg-white/5 text-white border border-white/30 hover:border-white/60 px-6 sm:px-8 py-4 rounded-sm font-semibold tracking-wider uppercase text-xs sm:text-sm transition-all duration-300"
           >
             Наши дела
           </button>

@@ -10,7 +10,7 @@ import Footer from '../components/Footer';
 
 const Home = () => {
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-screen bg-surface overflow-x-hidden">
       <Helmet>
         <title>Адвокаты Туапсе | Профессиональные юридические услуги</title>
         <meta name="description" content="Квалифицированная юридическая помощь в Туапсе. Арбитражные споры, защита бизнеса, семейное и наследственное право. Более 15 лет успешной практики." />
