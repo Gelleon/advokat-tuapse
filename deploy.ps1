@@ -110,7 +110,8 @@ function Get-RemoteCaseCount {
   & scp @SSH_OPTS $COUNT_SCRIPT_LOCAL "${SERVER}:${COUNT_SCRIPT_REMOTE}" 2>&1 | Out-Null
   if ($LASTEXITCODE -ne 0) { return -1 }
 
-  $out = Run-SshQuiet "node $COUNT_SCRIPT_REMOTE"
+  # Run from server project dir so require('@prisma/client') resolves
+  $out = Run-SshQuiet "cd $REMOTE_DIR/server && node $COUNT_SCRIPT_REMOTE"
   & ssh @SSH_OPTS $SERVER "rm -f $COUNT_SCRIPT_REMOTE" 2>&1 | Out-Null
 
   if ($out -match '^\d+$') { return [int]$out }
