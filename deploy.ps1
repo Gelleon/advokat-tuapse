@@ -89,10 +89,31 @@ function Run-ScpFrom {
   }
 }
 
-# Helper: count Case rows on the server by piping node and capturing JSON
+# Helper: count Case rows on the server via a temp .cjs file.
+# We upload the script with scp (avoids shell-escaping issues), run it, then delete it.
+$SCRIPTS_DIR  = Join-Path $env:TEMP "deploy_scripts_$TS"
+New-Item -ItemType Directory -Path $SCRIPTS_DIR -Force | Out-Null
+$COUNT_SCRIPT_LOCAL  = Join-Path $SCRIPTS_DIR 'count_cases.cjs'
+$COUNT_SCRIPT_REMOTE = "/tmp/deploy_count_$TS.cjs"
+
+@'
+const { PrismaClient } = require('@prisma/client');
+const p = new PrismaClient();
+(async () => {
+  const n = await p.case.count();
+  process.stdout.write(String(n));
+  await p.$disconnect();
+})().catch(e => { console.error(e); process.exit(1); });
+'@ | Out-File -FilePath $COUNT_SCRIPT_LOCAL -Encoding ascii -NoNewline
+
 function Get-RemoteCaseCount {
-  $countJson = Run-SshQuiet "cd $REMOTE_DIR/server && node -e ""const{PrismaClient}=require('@prisma/client');const p=new PrismaClient();p.case.count().then(n=>{console.log(n);return p.`$disconnect()})"""
-  if ($countJson -match '^\d+$') { return [int]$countJson }
+  & scp @SSH_OPTS $COUNT_SCRIPT_LOCAL "${SERVER}:${COUNT_SCRIPT_REMOTE}" 2>&1 | Out-Null
+  if ($LASTEXITCODE -ne 0) { return -1 }
+
+  $out = Run-SshQuiet "node $COUNT_SCRIPT_REMOTE"
+  & ssh @SSH_OPTS $SERVER "rm -f $COUNT_SCRIPT_REMOTE" 2>&1 | Out-Null
+
+  if ($out -match '^\d+$') { return [int]$out }
   return -1
 }
 
@@ -177,7 +198,8 @@ Write-Host "Server backup: $REMOTE_DIR/server/prisma/dev.db.bak.$TS" -Foreground
 Write-Host "Local backup:  $LOCAL_BAK" -ForegroundColor Green
 
 # Clean secrets
-Remove-Item -LiteralPath $PWD_DIR -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath $PWD_DIR     -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath $SCRIPTS_DIR -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item env:SSH_ASKPASS         -ErrorAction SilentlyContinue
 Remove-Item env:SSH_ASKPASS_REQUIRE -ErrorAction SilentlyContinue
 Remove-Item env:SSH_ASKPASS_PWD     -ErrorAction SilentlyContinue
