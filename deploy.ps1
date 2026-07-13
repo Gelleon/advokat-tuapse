@@ -105,11 +105,12 @@ function Run-ScpFrom {
 }
 
 # Helper: count Case rows on the server via a temp .cjs file.
-# We upload the script with scp (avoids shell-escaping issues), run it, then delete it.
+# We upload the script with scp into the SERVER project dir (next to node_modules)
+# so require('@prisma/client') resolves without needing 'cd'. Then run it and delete.
 $SCRIPTS_DIR  = Join-Path $env:TEMP "deploy_scripts_$TS"
 New-Item -ItemType Directory -Path $SCRIPTS_DIR -Force | Out-Null
 $COUNT_SCRIPT_LOCAL  = Join-Path $SCRIPTS_DIR 'count_cases.cjs'
-$COUNT_SCRIPT_REMOTE = "/tmp/deploy_count_$TS.cjs"
+$COUNT_SCRIPT_REMOTE = "$REMOTE_DIR/server/_deploy_count_$TS.cjs"
 
 # Build the script content as a single string (no here-strings - they fight
 # with the single quotes in require('@prisma/client')). Uses NewLine explicitly.
@@ -130,10 +131,9 @@ function Get-RemoteCaseCount {
   & scp @SSH_OPTS $COUNT_SCRIPT_LOCAL "${SERVER}:${COUNT_SCRIPT_REMOTE}" 2>&1 | Out-Null
   if ($LASTEXITCODE -ne 0) { return -1 }
 
-  # Run from server project dir so require('@prisma/client') resolves
-  $fullCmd = "cd $REMOTE_DIR/server && node $COUNT_SCRIPT_REMOTE 2>&1; echo __NODE_RC__\$?"
-  $raw = Run-SshQuiet $fullCmd
-  & ssh @SSH_OPTS $SERVER "rm -f $COUNT_SCRIPT_REMOTE" 2>&1 | Out-Null
+  # File lives next to node_modules -> require('@prisma/client') resolves directly
+  $raw = Run-SshQuiet "node '$COUNT_SCRIPT_REMOTE' 2>&1; echo __NODE_RC__\$?"
+  & ssh @SSH_OPTS $SERVER "rm -f '$COUNT_SCRIPT_REMOTE'" 2>&1 | Out-Null
 
   $clean = ($raw -replace '__NODE_RC__\d+\s*$', '').Trim()
   if ($clean -match '^\d+$') { return [int]$clean }
