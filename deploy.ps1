@@ -3,6 +3,7 @@
 # Guarantees the SQLite database is NOT destroyed by the deploy:
 #  - Creates a backup of dev.db on the server BEFORE anything
 #  - Downloads that backup to ./backups/
+#  - After git pull, restores dev.db from backup (git must not own the DB)
 #  - Uses `prisma migrate deploy` (not reset, not --force-reset)
 #  - Count cases BEFORE and AFTER the deploy; if count shrank,
 #    automatically restores the backup
@@ -121,7 +122,7 @@ $countScriptContent = @(
   'const DB_PATH = process.argv[2];'
   '(async () => {'
   '  let Database;'
-  '  try { Database = require("/var/www/advokat-tuapse/server/node_modules/better-sqlite3"); } catch (e) {}'
+  "  try { Database = require('$REMOTE_DIR/server/node_modules/better-sqlite3'); } catch (e) {}"
   '  if (Database) {'
   '    const db = new Database(DB_PATH, { readonly: true });'
   '    const row = db.prepare(String.fromCharCode(83,69,76,69,67,84,32,67,79,85,78,84,40,42,41,32,65,83,32,110,32,70,82,79,77,32,34,67,97,115,101,34)).get();'
@@ -166,7 +167,7 @@ Run-Ssh 'echo CONNECT_OK'
 # ---- Step 1: Backup BEFORE anything ---------------------------
 
 Write-Host ''
-Write-Host '=== [1/6] Backup SQLite DB from server ===' -ForegroundColor Cyan
+Write-Host '=== [1/7] Backup SQLite DB from server ===' -ForegroundColor Cyan
 Run-Ssh "cd $REMOTE_DIR/server && (test -f prisma/dev.db && cp prisma/dev.db prisma/dev.db.bak.$TS && echo BACKUP_CREATED || echo NO_DB)"
 Run-Ssh "cd $REMOTE_DIR/server && (test -f prisma/dev.db.bak.$TS && echo BACKUP_OK || echo BACKUP_FAIL)"
 
@@ -178,7 +179,7 @@ Write-Host ("Cases in DB BEFORE deploy: $CASES_BEFORE") -ForegroundColor Yellow
 
 # Safety block: refuse to run if known dangerous deploy step exists on the server
 Write-Host ''
-Write-Host '=== [2/6] Guard: refuse if dangerous deploy step exists ===' -ForegroundColor Cyan
+Write-Host '=== [2/7] Guard: refuse if dangerous deploy step exists ===' -ForegroundColor Cyan
 $dangerous = Run-SshQuiet "grep -rEl 'prisma\\s+migrate\\s+reset(\\s|$)|prisma\\s+db\\s+push\\s+--force-reset|\\brm\\s+.*dev\\.db\\b|\\bnpm\\s+run\\s+seed\\b' $REMOTE_DIR/deploy.bat $REMOTE_DIR/deploy.ps1 $REMOTE_DIR/force-update.ps1 2>/dev/null || true"
 if ([string]::IsNullOrWhiteSpace($dangerous)) {
   Write-Host 'No dangerous step found on the server. Safe to continue.' -ForegroundColor Green
@@ -195,20 +196,31 @@ if ([string]::IsNullOrWhiteSpace($dangerous)) {
 # ---- Step 3: Pull changes ------------------------------------
 
 Write-Host ''
-Write-Host '=== [3/6] Pull changes to server ===' -ForegroundColor Cyan
+Write-Host '=== [3/7] Pull changes to server ===' -ForegroundColor Cyan
 Run-Ssh "cd $REMOTE_DIR && (git fetch && (git diff --quiet HEAD..@{u} && echo NO_UPDATES || git pull --rebase --autostash))"
 
-# ---- Step 4: Install deps ------------------------------------
+# ---- Step 3b: Restore DB after pull (git may overwrite dev.db from repo) ----
 
 Write-Host ''
-Write-Host '=== [4/6] Install dependencies ===' -ForegroundColor Cyan
+Write-Host '=== [4/7] Restore SQLite DB from pre-pull backup ===' -ForegroundColor Cyan
+$restoreResult = Run-SshWithRC "cd $REMOTE_DIR/server && if test -f prisma/dev.db.bak.$TS; then cp prisma/dev.db.bak.$TS prisma/dev.db && echo DB_RESTORED; else echo NO_BACKUP; fi"
+if ($restoreResult.Out -match 'DB_RESTORED') {
+  Write-Host 'Production database restored from backup (git pull cannot overwrite it).' -ForegroundColor Green
+} else {
+  Write-Host 'No pre-pull backup found — skipping restore (first deploy or empty DB).' -ForegroundColor Yellow
+}
+
+# ---- Step 5: Install deps ------------------------------------
+
+Write-Host ''
+Write-Host '=== [5/7] Install dependencies ===' -ForegroundColor Cyan
 Run-Ssh "cd $REMOTE_DIR/server && (npm ci --omit=dev 2>/dev/null || npm install --omit=dev)"
 Run-Ssh "cd $REMOTE_DIR           && (npm ci --omit=dev 2>/dev/null || npm install --omit=dev)"
 
 # ---- Step 5: Apply migrations WITHOUT data loss ---------------
 
 Write-Host ''
-Write-Host '=== [5/6] Apply migrations WITHOUT data loss ===' -ForegroundColor Cyan
+Write-Host '=== [6/7] Apply migrations WITHOUT data loss ===' -ForegroundColor Cyan
 Run-Ssh "cd $REMOTE_DIR/server && npx prisma migrate deploy"
 # Make sure the typed client exists so the server actually runs.
 Run-Ssh "cd $REMOTE_DIR/server && npx prisma generate"
@@ -220,7 +232,7 @@ Run-Ssh "pm2 restart advokat-server 2>/dev/null || (cd $REMOTE_DIR/server && pm2
 # ---- Step 6: Verify data is still there ----------------------
 
 Write-Host ''
-Write-Host '=== [6/6] Verify cases count did not shrink ===' -ForegroundColor Cyan
+Write-Host '=== [7/7] Verify cases count did not shrink ===' -ForegroundColor Cyan
 $CASES_AFTER = Get-RemoteCaseCount
 Write-Host ("Cases in DB AFTER deploy:  $CASES_AFTER") -ForegroundColor Yellow
 

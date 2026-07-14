@@ -32,3 +32,12 @@ dist-ssr
 force-update.ps1
 deploy.env
 deploy.backups
+backups/
+
+# SQLite databases — never commit; production DB lives only on the server
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+server/dev.db
+server/prisma/dev.db

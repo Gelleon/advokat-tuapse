@@ -3,3 +3,11 @@ node_modules
 .env
 
 /generated/prisma
+
+# SQLite database — production copy lives only on the server
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+dev.db
+prisma/dev.db
