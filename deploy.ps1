@@ -4,7 +4,7 @@
 #  - Commits and pushes local changes before connecting to the server
 #  - Creates a backup of dev.db on the server BEFORE anything
 #  - Downloads that backup to ./backups/
-#  - After git pull, restores dev.db from backup (git must not own the DB)
+#  - Syncs server code via fetch + reset --hard origin/main (DB restored separately)
 #  - Uses `prisma migrate deploy` (not reset, not --force-reset)
 #  - Count cases BEFORE and AFTER the deploy; if count shrank,
 #    automatically restores the backup
@@ -365,11 +365,18 @@ if ([string]::IsNullOrWhiteSpace($dangerous)) {
   }
 }
 
-# ---- Step 3: Pull changes ------------------------------------
+# ---- Step 4: Sync code on server (abort stuck merges, reset to origin) ----
 
 Write-Host ''
-Write-Host '=== [4/8] Pull changes to server ===' -ForegroundColor Cyan
-Run-Ssh "cd $REMOTE_DIR && (git fetch && (git diff --quiet HEAD..@{u} && echo NO_UPDATES || git pull --rebase --autostash))"
+Write-Host '=== [4/8] Sync code on server ===' -ForegroundColor Cyan
+
+$conflicts = Run-SshQuiet "cd $REMOTE_DIR && git diff --name-only --diff-filter=U 2>/dev/null || true"
+if (-not [string]::IsNullOrWhiteSpace($conflicts)) {
+  Write-Host 'Unresolved git conflicts on server (will reset to origin/main):' -ForegroundColor Yellow
+  Write-Host $conflicts
+}
+
+Run-Ssh "cd $REMOTE_DIR && git fetch origin && (git rebase --abort 2>/dev/null || true) && (git merge --abort 2>/dev/null || true) && (git diff --quiet HEAD origin/main && echo NO_UPDATES || (git reset --hard origin/main && echo SYNC_OK))"
 
 # ---- Step 3b: Restore DB after pull (git may overwrite dev.db from repo) ----
 
