@@ -54,7 +54,7 @@ const BlogPost = () => {
         {post.thumbnailUrl && <meta property="og:image" content={`${BASE_URL}${post.thumbnailUrl}`} />}
         <meta property="og:type" content="article" />
       </Helmet>
-      <Header />
+      <Header solid />
       
       <main className="pt-32 pb-20">
         <div className="max-w-4xl mx-auto px-6">

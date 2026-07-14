@@ -12,7 +12,7 @@ const Terms = () => {
         <title>Условия использования | Адвокаты Туапсе</title>
         <meta name="description" content="Пользовательское соглашение и условия использования сайта" />
       </Helmet>
-      <Header />
+      <Header solid />
       
       <main className="pt-32 pb-20">
         <div className="max-w-4xl mx-auto px-6">

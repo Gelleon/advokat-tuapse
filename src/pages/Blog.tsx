@@ -40,7 +40,7 @@ const Blog = () => {
         <meta name="description" content="Читайте полезные статьи, обзоры судебной практики и юридические советы от ведущих адвокатов Туапсе." />
         <meta property="og:title" content="Блог адвокатов | Экспертные статьи и новости" />
       </Helmet>
-      <Header />
+      <Header solid />
       
       <main className="pt-32 pb-20">
         <div className="max-w-7xl mx-auto px-6">

@@ -2,8 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Scale, Menu, X, Phone, MessageCircle } from 'lucide-react';
 
-const Header = () => {
+interface HeaderProps {
+  solid?: boolean;
+}
+
+const Header = ({ solid = false }: HeaderProps) => {
   const [isScrolled, setIsScrolled] = useState(false);
+  const isSolid = solid || isScrolled;
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showConsultationPopup, setShowConsultationPopup] = useState(false);
 
@@ -35,7 +40,7 @@ const Header = () => {
     <>
       <header 
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-          isScrolled 
+          isSolid 
             ? 'bg-white/95 backdrop-blur-md shadow-premium py-4' 
             : 'bg-transparent py-6'
         }`}
@@ -45,12 +50,12 @@ const Header = () => {
             <div className="flex items-center space-x-3">
               <Scale 
                 className={`w-8 h-8 transition-colors duration-500 ${
-                  isScrolled ? 'text-primary' : 'text-white'
+                  isSolid ? 'text-primary' : 'text-white'
                 }`} 
                 strokeWidth={1.5}
               />
               <h1 className={`text-2xl font-serif font-bold tracking-wide transition-colors duration-500 ${
-                isScrolled ? 'text-primary' : 'text-white'
+                isSolid ? 'text-primary' : 'text-white'
               }`}>
                 Адвокаты Туапсе
               </h1>
@@ -60,7 +65,7 @@ const Header = () => {
               <a 
                 href="#services" 
                 className={`text-sm font-medium tracking-wider uppercase transition-colors duration-300 hover:text-secondary ${
-                  isScrolled ? 'text-primary' : 'text-white/90'
+                  isSolid ? 'text-primary' : 'text-white/90'
                 }`}
               >
                 Услуги
@@ -68,7 +73,7 @@ const Header = () => {
               <Link 
                 to="/blog" 
                 className={`text-sm font-medium tracking-wider uppercase transition-colors duration-300 hover:text-secondary ${
-                  isScrolled ? 'text-primary' : 'text-white/90'
+                  isSolid ? 'text-primary' : 'text-white/90'
                 }`}
               >
                 Блог
@@ -76,7 +81,7 @@ const Header = () => {
               <a 
                 href="#portfolio" 
                 className={`text-sm font-medium tracking-wider uppercase transition-colors duration-300 hover:text-secondary ${
-                  isScrolled ? 'text-primary' : 'text-white/90'
+                  isSolid ? 'text-primary' : 'text-white/90'
                 }`}
               >
                 Наши дела
@@ -84,7 +89,7 @@ const Header = () => {
               <a 
                 href="#contact" 
                 className={`text-sm font-medium tracking-wider uppercase transition-colors duration-300 hover:text-secondary ${
-                  isScrolled ? 'text-primary' : 'text-white/90'
+                  isSolid ? 'text-primary' : 'text-white/90'
                 }`}
               >
                 Контакты
@@ -93,15 +98,15 @@ const Header = () => {
 
             <div className="hidden md:flex items-center space-x-6">
               <div className="flex items-center space-x-2">
-                <Phone className={`w-4 h-4 ${isScrolled ? 'text-primary' : 'text-white'}`} strokeWidth={1.5} />
-                <span className={`text-sm font-medium tracking-wider ${isScrolled ? 'text-primary' : 'text-white'}`}>
+                <Phone className={`w-4 h-4 ${isSolid ? 'text-primary' : 'text-white'}`} strokeWidth={1.5} />
+                <span className={`text-sm font-medium tracking-wider ${isSolid ? 'text-primary' : 'text-white'}`}>
                   +7 (918) 048-61-12
                 </span>
               </div>
               <button 
                 onClick={() => setShowConsultationPopup(true)}
                 className={`px-6 py-2.5 rounded-sm font-medium text-sm tracking-wider uppercase transition-all duration-300 border ${
-                  isScrolled 
+                  isSolid 
                     ? 'bg-primary text-white border-primary hover:bg-primary-light hover:border-primary-light' 
                     : 'bg-white text-primary border-white hover:bg-transparent hover:text-white'
                 }`}
@@ -112,7 +117,7 @@ const Header = () => {
 
             <button 
               className={`lg:hidden transition-colors duration-300 ${
-                isScrolled ? 'text-primary' : 'text-white'
+                isSolid ? 'text-primary' : 'text-white'
               }`}
               onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
