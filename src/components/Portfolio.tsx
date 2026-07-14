@@ -21,13 +21,14 @@ const Portfolio = () => {
 
   const scroll = (direction: 'left' | 'right') => {
     if (carouselRef.current) {
-      const scrollAmount = direction === 'left' ? -400 : 400;
-      carouselRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+      const firstCard = carouselRef.current.querySelector<HTMLElement>(':scope > div');
+      const scrollAmount = firstCard ? firstCard.offsetWidth + 32 : 400;
+      carouselRef.current.scrollBy({ left: direction === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
     }
   };
 
   return (
-    <section id="portfolio" className="py-32 bg-white overflow-hidden border-t border-surface-dark">
+    <section id="portfolio" className="py-32 bg-white border-t border-surface-dark">
       <div className="container mx-auto px-6 max-w-7xl">
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-20 gap-8">
           <div className="max-w-2xl">
@@ -52,13 +53,17 @@ const Portfolio = () => {
         {/* Carousel */}
         <div 
           ref={carouselRef}
-          className="flex overflow-x-auto gap-8 pb-12 snap-x snap-mandatory hide-scrollbar -mx-6 px-6 md:mx-0 md:px-0"
+          className={`grid gap-8 pb-12 snap-x snap-mandatory hide-scrollbar -mx-6 px-6 md:mx-0 md:px-0 ${
+            cases.length <= 3
+              ? 'grid-flow-col auto-cols-[85vw] overflow-x-auto md:grid-flow-row md:grid-cols-3 md:overflow-x-visible'
+              : 'grid-flow-col auto-cols-[85vw] md:auto-cols-[calc((100%-4rem)/3)] overflow-x-auto'
+          }`}
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {cases.map((caseItem) => (
             <div 
               key={caseItem.id}
-              className="flex-none w-[85vw] md:w-[400px] snap-center group bg-surface rounded-sm p-8 transition-all duration-500 cursor-pointer border border-transparent hover:border-secondary flex flex-col"
+              className="snap-center min-w-0 group bg-surface rounded-sm p-8 transition-all duration-500 cursor-pointer border border-transparent hover:border-secondary flex flex-col"
               onClick={() => openCaseModal(caseItem)}
             >
               <div className="flex items-center justify-between mb-6">
@@ -87,7 +92,7 @@ const Portfolio = () => {
                       e.stopPropagation();
                       window.open(`${BASE_URL}${caseItem.pdfUrl}`, '_blank', 'noopener,noreferrer');
                     }}
-                    className="p-1 -mr-2 hover:bg-surface-dark rounded-sm transition-colors group/pdf"
+                    className="p-1 hover:bg-surface-dark rounded-sm transition-colors group/pdf"
                     title="Посмотреть документ"
                   >
                     <svg viewBox="0 0 48 48" className="w-10 h-10 transition-transform group-hover/pdf:scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">

@@ -8,6 +8,9 @@ export default defineConfig({
     exclude: ['lucide-react'],
   },
   server: {
+    watch: {
+      ignored: ['**/backups/**', '**/*.db', '**/deploy.last.log'],
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:5000',

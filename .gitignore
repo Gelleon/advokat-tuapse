@@ -33,6 +33,7 @@ force-update.ps1
 deploy.env
 deploy.backups
 backups/
+deploy.last.log
 
 # SQLite databases — never commit; production DB lives only on the server
 *.db
