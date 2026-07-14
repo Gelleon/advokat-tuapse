@@ -57,8 +57,8 @@ const Footer = () => {
           <div>
             <h4 className="text-xs font-medium tracking-widest uppercase text-white/40 mb-6">Навигация</h4>
             <div className="flex flex-col space-y-4">
-              <a href="#services" className="text-white/80 hover:text-secondary transition-colors font-light">Услуги</a>
-              <a href="#portfolio" className="text-white/80 hover:text-secondary transition-colors font-light">Наши дела</a>
+              <Link to="/#services" className="text-white/80 hover:text-secondary transition-colors font-light">Услуги</Link>
+              <Link to="/#portfolio" className="text-white/80 hover:text-secondary transition-colors font-light">Наши дела</Link>
               <Link to="/blog" className="text-white/80 hover:text-secondary transition-colors font-light">Блог</Link>
             </div>
           </div>

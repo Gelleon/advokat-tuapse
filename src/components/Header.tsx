@@ -62,14 +62,14 @@ const Header = ({ solid = false }: HeaderProps) => {
             </div>
 
             <nav className="hidden lg:flex items-center space-x-8">
-              <a 
-                href="#services" 
+              <Link 
+                to="/#services" 
                 className={`text-sm font-medium tracking-wider uppercase transition-colors duration-300 hover:text-secondary ${
                   isSolid ? 'text-primary' : 'text-white/90'
                 }`}
               >
                 Услуги
-              </a>
+              </Link>
               <Link 
                 to="/blog" 
                 className={`text-sm font-medium tracking-wider uppercase transition-colors duration-300 hover:text-secondary ${
@@ -78,22 +78,22 @@ const Header = ({ solid = false }: HeaderProps) => {
               >
                 Блог
               </Link>
-              <a 
-                href="#portfolio" 
+              <Link 
+                to="/#portfolio" 
                 className={`text-sm font-medium tracking-wider uppercase transition-colors duration-300 hover:text-secondary ${
                   isSolid ? 'text-primary' : 'text-white/90'
                 }`}
               >
                 Наши дела
-              </a>
-              <a 
-                href="#contact" 
+              </Link>
+              <Link 
+                to="/#contact" 
                 className={`text-sm font-medium tracking-wider uppercase transition-colors duration-300 hover:text-secondary ${
                   isSolid ? 'text-primary' : 'text-white/90'
                 }`}
               >
                 Контакты
-              </a>
+              </Link>
             </nav>
 
             <div className="hidden md:flex items-center space-x-6">
@@ -128,18 +128,18 @@ const Header = ({ solid = false }: HeaderProps) => {
           {isMenuOpen && (
             <div className="lg:hidden mt-4 bg-white rounded-sm p-6 shadow-premium">
               <nav className="flex flex-col space-y-6">
-                <a href="#services" className="text-primary font-medium tracking-wider uppercase text-sm hover:text-secondary transition-colors" onClick={() => setIsMenuOpen(false)}>
+                <Link to="/#services" className="text-primary font-medium tracking-wider uppercase text-sm hover:text-secondary transition-colors" onClick={() => setIsMenuOpen(false)}>
                   Услуги
-                </a>
+                </Link>
                 <Link to="/blog" className="text-primary font-medium tracking-wider uppercase text-sm hover:text-secondary transition-colors" onClick={() => setIsMenuOpen(false)}>
                   Блог
                 </Link>
-                <a href="#portfolio" className="text-primary font-medium tracking-wider uppercase text-sm hover:text-secondary transition-colors" onClick={() => setIsMenuOpen(false)}>
+                <Link to="/#portfolio" className="text-primary font-medium tracking-wider uppercase text-sm hover:text-secondary transition-colors" onClick={() => setIsMenuOpen(false)}>
                   Наши дела
-                </a>
-                <a href="#contact" className="text-primary font-medium tracking-wider uppercase text-sm hover:text-secondary transition-colors" onClick={() => setIsMenuOpen(false)}>
+                </Link>
+                <Link to="/#contact" className="text-primary font-medium tracking-wider uppercase text-sm hover:text-secondary transition-colors" onClick={() => setIsMenuOpen(false)}>
                   Контакты
-                </a>
+                </Link>
                 <div className="pt-6 border-t border-surface-dark">
                   <div className="flex items-center space-x-2 text-sm text-primary mb-4">
                     <Phone className="w-4 h-4" strokeWidth={1.5} />
