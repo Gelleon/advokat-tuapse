@@ -8,9 +8,13 @@ import postsRoutes from './routes/posts';
 import settingsRoutes from './routes/settings';
 import aiRoutes from './routes/ai';
 import path from 'path';
+import { createRequire } from 'module';
 import { PrismaClient } from '@prisma/client';
 
 dotenv.config();
+
+const require = createRequire(__filename);
+const { generateSitemapXml } = require('./sitemap.cjs');
 
 const app = express();
 const prisma = new PrismaClient();
@@ -53,50 +57,11 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/ai', aiRoutes);
 
 // Dynamic Sitemap
-async function generateSitemapXml(baseUrl: string): Promise<string> {
-  const posts = await prisma.post.findMany({
-    where: { status: 'PUBLISHED' },
-    select: { slug: true, updatedAt: true },
-  });
-
-  const normalizedBaseUrl = baseUrl.replace(/\/$/, '');
-
-  let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-  xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
-
-  const staticRoutes = [
-    { url: '/', priority: '1.0', changefreq: 'weekly' },
-    { url: '/blog', priority: '0.9', changefreq: 'daily' },
-    { url: '/privacy', priority: '0.3', changefreq: 'yearly' },
-    { url: '/terms', priority: '0.3', changefreq: 'yearly' },
-  ];
-
-  staticRoutes.forEach((route) => {
-    xml += `  <url>\n`;
-    xml += `    <loc>${normalizedBaseUrl}${route.url}</loc>\n`;
-    xml += `    <changefreq>${route.changefreq}</changefreq>\n`;
-    xml += `    <priority>${route.priority}</priority>\n`;
-    xml += `  </url>\n`;
-  });
-
-  posts.forEach((post) => {
-    xml += `  <url>\n`;
-    xml += `    <loc>${normalizedBaseUrl}/blog/${post.slug}</loc>\n`;
-    xml += `    <lastmod>${post.updatedAt.toISOString()}</lastmod>\n`;
-    xml += `    <changefreq>monthly</changefreq>\n`;
-    xml += `    <priority>0.8</priority>\n`;
-    xml += `  </url>\n`;
-  });
-
-  xml += `</urlset>`;
-  return xml;
-}
-
 const handleSitemap = async (_req: express.Request, res: express.Response) => {
   try {
     const baseUrl = process.env.FRONTEND_URL || 'https://advokat-tuapse.ru';
-    const xml = await generateSitemapXml(baseUrl);
-    res.header('Content-Type', 'application/xml');
+    const xml = await generateSitemapXml(prisma, baseUrl);
+    res.header('Content-Type', 'application/xml; charset=utf-8');
     res.send(xml);
   } catch (error) {
     console.error(error);

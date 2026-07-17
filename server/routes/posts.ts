@@ -4,6 +4,16 @@ import { authenticateToken } from '../middleware/auth';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { createRequire } from 'module';
+
+const require = createRequire(__filename);
+const { writeSitemapFile } = require('../write-sitemap.cjs');
+
+const refreshSitemap = () => {
+  writeSitemapFile().catch((error: Error) => {
+    console.error('Sitemap refresh failed:', error);
+  });
+};
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -122,6 +132,9 @@ router.post('/', authenticateToken, upload.single('thumbnail'), async (req, res)
       ...newPost,
       tags: JSON.parse(newPost.tags)
     });
+    if (newPost.status === 'PUBLISHED') {
+      refreshSitemap();
+    }
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Ошибка при создании публикации' });
@@ -161,6 +174,7 @@ router.put('/:id', authenticateToken, upload.single('thumbnail'), async (req, re
       ...updatedPost,
       tags: JSON.parse(updatedPost.tags)
     });
+    refreshSitemap();
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Ошибка при обновлении публикации' });
@@ -174,6 +188,7 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     await prisma.post.delete({
       where: { id }
     });
+    refreshSitemap();
     res.json({ message: 'Пост успешно удален' });
   } catch (error) {
     res.status(500).json({ error: 'Ошибка при удалении публикации' });

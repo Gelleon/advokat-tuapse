@@ -221,12 +221,14 @@ $env:DISPLAY             = ':0'
 $SERVER_PASSWORD = $null
 [System.GC]::Collect()
 
-# SSH options — без TTY, чтобы ssh/scp не ждали Enter между командами
+# SSH options — без TTY, keepalive для длинных npm-команд
 $SSH_OPTS = @(
   '-o', 'StrictHostKeyChecking=accept-new',
   '-o', 'BatchMode=no',
   '-o', 'RequestTTY=no',
   '-o', 'ConnectTimeout=30',
+  '-o', 'ServerAliveInterval=15',
+  '-o', 'ServerAliveCountMax=20',
   '-o', 'LogLevel=ERROR'
 )
 
@@ -512,8 +514,10 @@ Run-Ssh "cd $REMOTE_DIR/server && npx --yes prisma migrate deploy"
 # Make sure the typed client exists so the server actually runs.
 Run-Ssh "cd $REMOTE_DIR/server && npx --yes prisma generate"
 
-# Build + restart
+# Build + sitemap + restart
 Run-Ssh "cd $REMOTE_DIR && npm run build"
+Run-Ssh "cd $REMOTE_DIR/server && node generate-sitemap.cjs ../dist/sitemap.xml"
+Run-Ssh "test -f $REMOTE_DIR/dist/sitemap.xml && head -n 2 $REMOTE_DIR/dist/sitemap.xml || (echo SITEMAP_MISSING; exit 1)"
 Run-Ssh "pm2 restart advokat-server 2>/dev/null || (cd $REMOTE_DIR/server && pm2 start 'node dist/index.js' --name advokat-server)"
 
 # ---- Step 6: Verify data is still there ----------------------
