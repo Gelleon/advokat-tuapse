@@ -266,6 +266,31 @@ function Run-Ssh {
   }
 }
 
+function Run-SshLive {
+  param(
+    [string]$Label,
+    [string]$Cmd
+  )
+  Write-Host ''
+  Write-Host $Label -ForegroundColor Cyan
+  $remoteCmd = Wrap-RemoteCommand $Cmd
+  $prevEAP = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try {
+    & ssh @SSH_OPTS $SERVER $remoteCmd 2>&1 | ForEach-Object {
+      $line = if ($_ -is [System.Management.Automation.ErrorRecord]) { $_.ToString() } else { "$_" }
+      if (-not [string]::IsNullOrWhiteSpace($line)) {
+        Write-Host $line
+      }
+    }
+    if ($LASTEXITCODE -ne 0) {
+      throw "ssh exited with code $LASTEXITCODE. Command: $Cmd"
+    }
+  } finally {
+    $ErrorActionPreference = $prevEAP
+  }
+}
+
 function Run-SshQuiet {
   param([string]$Cmd)
   return (Invoke-SshCapture $Cmd).Out
@@ -471,14 +496,18 @@ if ($restoreResult.Out -match 'DB_RESTORED') {
   Write-Host 'No pre-pull backup found — skipping restore (first deploy or empty DB).' -ForegroundColor Yellow
 }
 
-# ---- Step 5: Install deps ------------------------------------
+# ---- Step 6: Install deps ------------------------------------
 
 Write-Host ''
 Write-Host '=== [6/8] Install dependencies ===' -ForegroundColor Cyan
-# Server: production deps only (prisma CLI is in dependencies).
-Run-Ssh "cd $REMOTE_DIR/server && (npm ci --omit=dev --no-fund --no-audit 2>/dev/null || npm install --omit=dev --no-fund --no-audit)"
-# Frontend: full install — vite/tailwind/typescript are devDependencies but required for build.
-Run-Ssh "cd $REMOTE_DIR && (npm ci --no-fund --no-audit 2>/dev/null || npm install --no-fund --no-audit)"
+Write-Host 'This step can take 5-15 minutes. Progress from npm will appear below.' -ForegroundColor Yellow
+
+$serverInstallCmd = "cd $REMOTE_DIR/server && if [ -d node_modules ] && [ -f package-lock.json ] && cmp -s package-lock.json node_modules/.deploy-lock 2>/dev/null; then echo 'Server dependencies unchanged - skipping npm install.'; else npm install --omit=dev --no-fund --no-audit --loglevel=warn && cp package-lock.json node_modules/.deploy-lock; fi"
+
+$frontendInstallCmd = "cd $REMOTE_DIR && if [ -d node_modules ] && [ -f package-lock.json ] && cmp -s package-lock.json node_modules/.deploy-lock 2>/dev/null; then echo 'Frontend dependencies unchanged - skipping npm install.'; else npm install --no-fund --no-audit --loglevel=warn && cp package-lock.json node_modules/.deploy-lock; fi"
+
+Run-SshLive -Label '[6a/8] Server dependencies' -Cmd $serverInstallCmd
+Run-SshLive -Label '[6b/8] Frontend dependencies' -Cmd $frontendInstallCmd
 
 # ---- Step 5: Apply migrations WITHOUT data loss ---------------
 
