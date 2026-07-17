@@ -1,8 +1,8 @@
 'use strict';
 
-require('dotenv').config({ path: path.join(__dirname, '.env') });
 const fs = require('fs');
 const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const { PrismaClient } = require('@prisma/client');
 const { generateSitemapXml } = require('./sitemap.cjs');
 
