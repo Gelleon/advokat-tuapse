@@ -161,11 +161,11 @@ const BlogPost = () => {
             </header>
 
             {post.thumbnailUrl && (
-              <figure className="mb-12 overflow-hidden rounded-sm">
+              <figure className="mb-12 overflow-hidden rounded-sm bg-slate-50">
                 <img
                   src={`${BASE_URL}${post.thumbnailUrl}`}
                   alt={post.title}
-                  className="w-full max-h-[420px] object-cover"
+                  className="w-full h-auto object-contain"
                   itemProp="image"
                 />
               </figure>
