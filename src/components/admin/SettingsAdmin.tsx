@@ -166,8 +166,8 @@ const SettingsAdmin = () => {
             <Info className="w-5 h-5 flex-shrink-0 text-blue-500" />
             <div className="space-y-2">
               <p>
-                Перед картинкой ИИ читает текст статьи и задаёт конкретную сцену ({`{sceneBrief}`}).
-                Промпт лучше на английском. Книги/весы как главный объект запрещены в стандартном шаблоне.
+                Формат как на vc.ru: тёмный фон и сцена в скруглённой панели по центру.
+                Перед картинкой ИИ читает текст статьи ({`{sceneBrief}`}). Промпт лучше на английском.
               </p>
               <p className="font-mono text-xs">
                 {`{sceneBrief}`} · {`{articleExcerpt}`} · {`{practiceArea}`} · {`{previewText}`} · {`{title}`} · {`{category}`}

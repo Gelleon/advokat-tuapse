@@ -49,27 +49,27 @@ function extensionFromMediaType(mediaType?: string): string {
 function fallbackSceneBrief(excerpt: string, practiceArea: string): string {
   const lower = `${excerpt} ${practiceArea}`.toLowerCase();
   if (/дорог|асфальт|трасс|шоссе|дорожн/.test(lower)) {
-    return 'Road construction site at dusk: freshly paved asphalt, orange traffic cones, road roller in soft focus, blank rolled plans and a folder on a site desk — no books, no text.';
+    return 'Inside the panel: road construction at dusk — asphalt, orange cones, road roller soft-focus, blank rolled plans on a site desk; no books, no text.';
   }
   if (/земельн|кадастр|участк|межев/.test(lower)) {
-    return 'Survey stakes along a green land plot boundary, blank cadastral sheet on a wooden table, soft daylight — no books, no text.';
+    return 'Inside the panel: survey stakes on a green land plot, blank cadastral sheet on wood table, soft daylight; no books, no text.';
   }
   if (/наслед|завещан/.test(lower)) {
-    return 'Quiet study with house keys and a sealed blank envelope on a wooden desk by a window — no books as hero object, no text.';
+    return 'Inside the panel: quiet study with house keys and a sealed blank envelope on a wooden desk; no book library hero, no text.';
   }
   if (/алимент|развод|брак|семей/.test(lower)) {
-    return 'Calm modern apartment interior, two coffee cups and blank folders on a table — respectful family-law mood, no books, no text.';
+    return 'Inside the panel: calm apartment table with two coffee cups and blank folders; respectful family-law mood, no text.';
   }
   if (/банкрот|долг|несостоятель/.test(lower)) {
-    return 'Modest kitchen table with blank bills, keys and a calculator in muted light — sober bankruptcy mood, no books, no text.';
+    return 'Inside the panel: modest table with blank bills, keys and calculator in muted light; no books, no text.';
   }
   if (/уголов|следств|обвинен/.test(lower)) {
-    return 'Quiet defense attorney consultation room with blank case folder on the desk at dusk — no handcuffs, no books library, no text.';
+    return 'Inside the panel: quiet defense consultation desk with a blank case folder at dusk; no handcuffs, no text.';
   }
   if (/контракт|договор|подряд|строитель|госзакуп|арбитраж/.test(lower)) {
-    return 'Construction or business contract setting: hard hat, blank contract folder, site or office desk with rolled blank drawings — industry props, not a law library.';
+    return 'Inside the panel: construction-contract still life — hard hat, blank folder, rolled blank drawings on a site/office desk; no law library.';
   }
-  return 'Professional consulting desk with blank folders and soft window light, concrete props matching the article industry — not a law library, no scales, no text.';
+  return 'Inside the panel: professional consulting desk with blank folders and industry props matching the article; no law books, no scales, no text.';
 }
 
 async function buildSceneBrief(input: {
@@ -97,23 +97,23 @@ async function buildSceneBrief(input: {
           {
             role: 'system',
             content:
-              'You write short English visual briefs for photoreal article covers. Output 1-2 sentences only. No quotes, no markdown, no title text.'
+              'You write short English visual briefs for vc.ru-style cover panels. Output 1-2 sentences only describing the INNER panel scene. No quotes, no markdown, no title text.'
           },
           {
             role: 'user',
-            content: `Write a concrete visual scene for a cover photo that matches THIS article topic.
+            content: `Describe ONLY the photoreal scene that will sit inside a floating rounded panel on a dark solid background (vc.ru cover format). Do not describe the outer background or frame.
 
 Article title: ${input.title}
 Practice area: ${input.practiceArea}
 Article text gist: ${excerpt}
 
 Requirements:
-- Show the real subject of the article with industry/location props (e.g. road construction contracts → asphalt roadworks, cones, road roller, blank site plans — NOT a law book)
-- If the article is about contracts/procurement/construction/roads/land/family/bankruptcy/inheritance/crime — reflect that specific domain
+- Match the real article subject with industry props (e.g. road construction contracts → asphalt roadworks, cones, road roller, blank site plans — NOT a law book)
+- Start with "Inside the panel:"
+- Objects/environments only; no people faces
+- Documents/plans blank or unreadable
 - Never use law books, library shelves, scales of justice, or gavel as the main subject
-- No people faces; objects and environments only
-- Mention that documents/plans are blank/unreadable
-- Do not include any words that should appear in the image`
+- Do not request browser chrome, URLs, or any readable UI text`
           }
         ]
       }),
@@ -186,9 +186,14 @@ export async function generateBlogCoverImage(vars: {
     articleExcerpt
   });
 
-  // Старые шаблоны без {sceneBrief} всё равно получают сцену в начале
+  // Старые шаблоны без {sceneBrief} всё равно получают формат vc.ru + сцену
   if (!template.includes('{sceneBrief}')) {
-    prompt = `MANDATORY SCENE (depict exactly this): ${sceneBrief}\n\nTEXTLESS image, no letters or numbers.\n\n${prompt}`;
+    prompt = [
+      'vc.ru-style cover: flat dark charcoal background, centered floating rounded panel with soft drop shadow and generous margins.',
+      `PANEL SCENE: ${sceneBrief}`,
+      'TEXTLESS image — no letters, numbers, URLs, or UI labels.',
+      prompt
+    ].join('\n\n');
   }
 
   const controller = new AbortController();
