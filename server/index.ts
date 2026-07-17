@@ -56,6 +56,16 @@ app.use('/api/posts', postsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/ai', aiRoutes);
 
+app.get('/api/health', async (_req, res) => {
+  try {
+    const casesCount = await prisma.case.count();
+    res.json({ ok: true, cases: casesCount });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ ok: false });
+  }
+});
+
 // Dynamic Sitemap
 const handleSitemap = async (_req: express.Request, res: express.Response) => {
   try {

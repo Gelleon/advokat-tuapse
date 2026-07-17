@@ -1,6 +1,6 @@
 'use strict';
 
-require('dotenv').config();
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const fs = require('fs');
 const path = require('path');
 const { PrismaClient } = require('@prisma/client');

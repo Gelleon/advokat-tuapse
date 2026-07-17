@@ -514,11 +514,30 @@ Run-Ssh "cd $REMOTE_DIR/server && npx --yes prisma migrate deploy"
 # Make sure the typed client exists so the server actually runs.
 Run-Ssh "cd $REMOTE_DIR/server && npx --yes prisma generate"
 
+function Restore-LatestRemoteDb {
+  param([string]$Reason)
+  Write-Host ("Restoring database from latest server backup ({0}) ..." -f $Reason) -ForegroundColor Yellow
+  $result = Run-SshQuiet "cd $REMOTE_DIR/server/prisma && LATEST=`$(ls -t dev.db.bak.* 2>/dev/null | head -1) && if [ -n `"`$LATEST`" ]; then cp `"`$LATEST`" dev.db && echo RESTORED:`$LATEST; else echo NO_BACKUP; fi"
+  Write-Host $result
+  return ($result -match 'RESTORED:')
+}
+
+function Restart-RemoteServer {
+  Run-Ssh "cd $REMOTE_DIR/server && (pm2 restart advokat-server 2>/dev/null || pm2 start npm --name advokat-server -- start) && pm2 save"
+  Start-Sleep -Seconds 2
+  $health = Run-SshQuiet "curl -fsS http://127.0.0.1:5000/api/health 2>/dev/null || true"
+  if ($health -match '"ok"\s*:\s*true') {
+    Write-Host "Server health check OK: $health" -ForegroundColor Green
+  } else {
+    Write-Host "WARNING: server health check failed: $health" -ForegroundColor Red
+  }
+}
+
 # Build + sitemap + restart
 Run-Ssh "cd $REMOTE_DIR && npm run build"
 Run-Ssh "cd $REMOTE_DIR/server && node generate-sitemap.cjs ../dist/sitemap.xml"
 Run-Ssh "test -f $REMOTE_DIR/dist/sitemap.xml && head -n 2 $REMOTE_DIR/dist/sitemap.xml || (echo SITEMAP_MISSING; exit 1)"
-Run-Ssh "pm2 restart advokat-server 2>/dev/null || (cd $REMOTE_DIR/server && pm2 start 'node dist/index.js' --name advokat-server)"
+Restart-RemoteServer
 
 # ---- Step 6: Verify data is still there ----------------------
 
@@ -527,13 +546,26 @@ Write-Host '=== [8/8] Verify cases count did not shrink ===' -ForegroundColor Cy
 $CASES_AFTER = Get-RemoteCaseCount
 Write-Host ("Cases in DB AFTER deploy:  $CASES_AFTER") -ForegroundColor Yellow
 
+if ($CASES_AFTER -eq 0) {
+  if (Restore-LatestRemoteDb 'zero cases after deploy') {
+    Restart-RemoteServer
+    $CASES_AFTER = Get-RemoteCaseCount
+    Write-Host ("Cases in DB AFTER restore: $CASES_AFTER") -ForegroundColor Yellow
+  }
+}
+
 if ($CASES_BEFORE -ge 0 -and $CASES_AFTER -ge 0 -and $CASES_AFTER -lt $CASES_BEFORE) {
   Write-Host ''
   Write-Host '!!! DEPLOY REDUCED CASE COUNT: before='$CASES_BEFORE' after='$CASES_AFTER' !!!' -ForegroundColor Red
-  Write-Host 'Restoring database from backup ...' -ForegroundColor Red
-  Run-Ssh "cd $REMOTE_DIR/server && cp prisma/dev.db.bak.$TS prisma/dev.db && pm2 restart advokat-server && echo RESTORED_OK"
-  Write-Host 'Database restored from backup. Please review the server deploy scripts.' -ForegroundColor Red
-  Exit-Deploy 3
+  Write-Host 'Restoring database from deploy backup ...' -ForegroundColor Red
+  Run-Ssh "cd $REMOTE_DIR/server && cp prisma/dev.db.bak.$TS prisma/dev.db && echo RESTORED_OK"
+  Restart-RemoteServer
+  $CASES_AFTER = Get-RemoteCaseCount
+  Write-Host ("Cases in DB AFTER restore: $CASES_AFTER") -ForegroundColor Yellow
+  if ($CASES_AFTER -lt $CASES_BEFORE) {
+    Write-Host 'Database restore did not recover all cases. Check server/prisma/dev.db.bak.* backups.' -ForegroundColor Red
+    Exit-Deploy 3
+  }
 }
 
 Write-Host ''

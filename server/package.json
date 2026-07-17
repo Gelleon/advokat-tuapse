@@ -4,12 +4,21 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "tsx index.ts",
+    "generate:sitemap": "node generate-sitemap.cjs ../dist/sitemap.xml",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
+  "dependencies": {
+    "@prisma/adapter-libsql": "^7.8.0",
+    "@prisma/client": "^6.19.3",
+    "better-sqlite3": "^12.11.1",
+    "prisma": "^6.19.3",
+    "tsx": "^4.23.0"
+  },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/better-sqlite3": "^7.6.13",
@@ -20,13 +29,6 @@
     "@types/multer": "^2.2.0",
     "nodemon": "^3.1.14",
     "ts-node": "^10.9.2",
-    "tsx": "^4.23.0",
     "typescript": "^7.0.2"
-  },
-  "dependencies": {
-    "@prisma/adapter-libsql": "^7.8.0",
-    "@prisma/client": "^6.19.3",
-    "better-sqlite3": "^12.11.1",
-    "prisma": "^6.19.3"
   }
 }
