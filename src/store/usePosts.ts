@@ -96,5 +96,5 @@ export const usePosts = (isAdmin = false) => {
     }
   };
 
-  return { posts, addPost, updatePost, deletePost };
+  return { posts, addPost, updatePost, deletePost, refreshPosts: fetchPosts };
 };

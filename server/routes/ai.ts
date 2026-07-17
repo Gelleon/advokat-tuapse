@@ -1,6 +1,7 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth';
+import { generateBlogDraft, listPracticeAreasForApi } from '../services/blogAgent';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -69,6 +70,34 @@ router.post('/optimize', authenticateToken, async (req, res) => {
       return res.status(504).json({ error: 'Превышено время ожидания ответа от ИИ' });
     }
     res.status(500).json({ error: 'Внутренняя ошибка при работе с ИИ' });
+  }
+});
+
+router.get('/blog/practice-areas', authenticateToken, (_req, res) => {
+  res.json({ areas: listPracticeAreasForApi() });
+});
+
+router.post('/blog/generate', authenticateToken, async (req, res) => {
+  try {
+    const { practiceAreaId, periodType, author } = req.body || {};
+
+    if (periodType && !['daily', 'weekly', 'monthly'].includes(periodType)) {
+      return res.status(400).json({ error: 'periodType должен быть daily, weekly или monthly' });
+    }
+
+    const result = await generateBlogDraft({
+      practiceAreaId: practiceAreaId || 'auto',
+      periodType,
+      author
+    });
+
+    res.status(201).json(result);
+  } catch (error: any) {
+    console.error('Blog agent error:', error);
+    if (error?.name === 'AbortError') {
+      return res.status(504).json({ error: 'Превышено время ожидания ответа от ИИ' });
+    }
+    res.status(500).json({ error: error?.message || 'Ошибка генерации статьи' });
   }
 });
 

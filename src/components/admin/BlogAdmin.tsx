@@ -1,9 +1,11 @@
 import React, { useState, useRef } from 'react';
 import { usePosts, Post } from '../../store/usePosts';
-import { Plus, Trash2, Upload, Edit2, X, Image as ImageIcon, Calendar } from 'lucide-react';
+import { Plus, Trash2, Edit2, X, Image as ImageIcon, Calendar, Sparkles, Loader2 } from 'lucide-react';
+import { API_URL } from '../../config';
+import { PRACTICE_AREA_OPTIONS } from '../../data/practiceAreas';
 
 const BlogAdmin = () => {
-  const { posts, addPost, updatePost, deletePost } = usePosts(true); // pass isAdmin=true
+  const { posts, addPost, updatePost, deletePost, refreshPosts } = usePosts(true); // pass isAdmin=true
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -25,6 +27,11 @@ const BlogAdmin = () => {
   const [formData, setFormData] = useState<Partial<Post>>(initialFormState);
   const [tagInput, setTagInput] = useState('');
   const [thumbnailName, setThumbnailName] = useState('');
+
+  const [practiceAreaId, setPracticeAreaId] = useState('auto');
+  const [periodType, setPeriodType] = useState<'weekly' | 'monthly'>('weekly');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [agentMessage, setAgentMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -90,6 +97,63 @@ const BlogAdmin = () => {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const handleGenerateArticle = async () => {
+    setIsGenerating(true);
+    setAgentMessage(null);
+
+    try {
+      const response = await fetch(`${API_URL}/ai/blog/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          practiceAreaId,
+          periodType,
+          author: formData.author || 'Адвокаты Туапсе'
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Не удалось сгенерировать статью');
+      }
+
+      const post = data.post as Post;
+      setEditingId(post.id);
+      setFormData({
+        title: post.title,
+        slug: post.slug,
+        previewText: post.previewText,
+        content: post.content,
+        category: post.category || 'Отраслевые новости',
+        tags: post.tags || [],
+        author: post.author || 'Адвокаты Туапсе',
+        status: 'DRAFT',
+        publishedAt: '',
+        metaTitle: post.metaTitle || '',
+        metaDescription: post.metaDescription || ''
+      });
+      setThumbnailName('');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+
+      await refreshPosts();
+      setAgentMessage({
+        text: `Черновик создан по документу: ${data.source?.complexName || data.source?.eoNumber}. Проверьте текст и опубликуйте вручную.`,
+        type: 'success'
+      });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (error: any) {
+      console.error('Blog agent failed:', error);
+      setAgentMessage({
+        text: error?.message || 'Ошибка генерации статьи',
+        type: 'error'
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -129,6 +193,67 @@ const BlogAdmin = () => {
   };
 
   return (
+    <div className="space-y-8">
+      {/* AI Agent */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div>
+            <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-amber-500" />
+              AI-агент блога
+            </h2>
+            <p className="text-sm text-slate-500 mt-1">
+              Ищет свежие акты на publication.pravo.gov.ru, пишет понятную SEO-статью и сохраняет черновик.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+          <div className="md:col-span-1">
+            <label className="block text-sm font-medium text-slate-700 mb-1">Направление</label>
+            <select
+              value={practiceAreaId}
+              onChange={(e) => setPracticeAreaId(e.target.value)}
+              disabled={isGenerating}
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
+            >
+              {PRACTICE_AREA_OPTIONS.map((area) => (
+                <option key={area.id} value={area.id}>{area.title}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Период поиска</label>
+            <select
+              value={periodType}
+              onChange={(e) => setPeriodType(e.target.value as 'weekly' | 'monthly')}
+              disabled={isGenerating}
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
+            >
+              <option value="weekly">За неделю</option>
+              <option value="monthly">За месяц</option>
+            </select>
+          </div>
+          <div>
+            <button
+              type="button"
+              onClick={handleGenerateArticle}
+              disabled={isGenerating}
+              className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-400 text-white px-6 py-2.5 rounded-lg font-semibold transition-colors"
+            >
+              {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+              {isGenerating ? 'Генерируем…' : 'Сгенерировать черновик'}
+            </button>
+          </div>
+        </div>
+
+        {agentMessage && (
+          <div className={`mt-4 p-3 rounded-lg text-sm ${agentMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+            {agentMessage.text}
+          </div>
+        )}
+      </div>
+
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       {/* Form */}
       <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
@@ -313,6 +438,7 @@ const BlogAdmin = () => {
           ))}
         </div>
       </div>
+    </div>
     </div>
   );
 };

@@ -565,7 +565,8 @@ function Restart-RemoteServer {
 # Build + sitemap + restart
 Run-Ssh "cd $REMOTE_DIR && npm run build"
 Run-Ssh "cd $REMOTE_DIR/server && node generate-sitemap.cjs ../dist/sitemap.xml"
-Run-Ssh "test -f $REMOTE_DIR/dist/sitemap.xml && head -n 2 $REMOTE_DIR/dist/sitemap.xml || (echo SITEMAP_MISSING; exit 1)"
+Run-Ssh "test -f $REMOTE_DIR/dist/sitemap.xml && head -n 1 $REMOTE_DIR/dist/sitemap.xml | grep -q '<?xml' || (echo SITEMAP_NOT_XML; exit 1)"
+Run-Ssh "curl -fsS https://advokat-tuapse.ru/sitemap.xml | head -n 1 | grep -q '<?xml' && echo LIVE_SITEMAP_OK || (echo LIVE_SITEMAP_IS_HTML; exit 1)"
 Restart-RemoteServer
 
 # ---- Step 6: Verify data is still there ----------------------
