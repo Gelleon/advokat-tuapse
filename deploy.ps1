@@ -297,13 +297,35 @@ function Run-ScpFrom {
   }
 }
 
-# Helper: count Case rows directly via the SQLite file (avoids any
-# Prisma client generation issues on the server). Runs from server/
-# so require('better-sqlite3') resolves via node_modules.
+function Parse-CaseCountOutput {
+  param([string]$Raw)
+  if ([string]::IsNullOrWhiteSpace($Raw)) { return $null }
+  $line = ($Raw -split "`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ -match '^\d+$' } | Select-Object -First 1)
+  if ($line) { return [int]$line }
+  return $null
+}
+
+# Helper: count Case rows in SQLite. Python first — works before npm install.
 $SCRIPTS_DIR  = Join-Path $env:TEMP "deploy_scripts_$TS"
 New-Item -ItemType Directory -Path $SCRIPTS_DIR -Force | Out-Null
+$COUNT_PY_LOCAL     = Join-Path $SCRIPTS_DIR 'count_cases.py'
+$COUNT_PY_REMOTE    = "$REMOTE_DIR/server/_deploy_count_$TS.py"
 $COUNT_SCRIPT_LOCAL  = Join-Path $SCRIPTS_DIR 'count_cases.cjs'
 $COUNT_SCRIPT_REMOTE = "$REMOTE_DIR/server/_deploy_count_$TS.cjs"
+
+@'
+import sqlite3
+import sys
+
+db_path = sys.argv[1] if len(sys.argv) > 1 else "prisma/dev.db"
+con = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+try:
+    cur = con.cursor()
+    cur.execute('SELECT COUNT(*) FROM "Case"')
+    print(cur.fetchone()[0])
+finally:
+    con.close()
+'@ | Set-Content -LiteralPath $COUNT_PY_LOCAL -Encoding ASCII
 
 $nl = [Environment]::NewLine
 $countScriptContent = @(
@@ -342,21 +364,45 @@ $countScriptContent = @(
 [System.IO.File]::WriteAllText($COUNT_SCRIPT_LOCAL, $countScriptContent, [System.Text.Encoding]::ASCII)
 
 function Get-RemoteCaseCount {
-  $dbRemote = 'prisma/dev.db'
+  $dbExists = Run-SshQuiet "cd $REMOTE_DIR/server && (test -f prisma/dev.db && echo YES || echo NO)"
+  if ($dbExists.Trim() -ne 'YES') {
+    Write-Host 'No prisma/dev.db on server — case count treated as 0.' -ForegroundColor Yellow
+    return 0
+  }
+
+  # 1) Python stdlib sqlite3 (no node_modules required)
+  & scp @SSH_OPTS $COUNT_PY_LOCAL "${SERVER}:${COUNT_PY_REMOTE}" 2>&1 | Out-Null
+  if ($LASTEXITCODE -eq 0) {
+    $raw = Run-SshQuiet "cd $REMOTE_DIR/server && python3 ./_deploy_count_$TS.py prisma/dev.db 2>&1"
+    & ssh @SSH_OPTS $SERVER "rm -f '$COUNT_PY_REMOTE'" 2>&1 | Out-Null
+    $count = Parse-CaseCountOutput $raw
+    if ($null -ne $count) { return $count }
+    if ($raw) {
+      Write-Host '[count_cases.py on server]:' -ForegroundColor DarkYellow
+      Write-Host $raw -ForegroundColor DarkYellow
+    }
+  }
+
+  # 2) sqlite3 CLI if installed
+  $raw = Run-SshQuiet "cd $REMOTE_DIR/server && (command -v sqlite3 >/dev/null && sqlite3 prisma/dev.db 'SELECT COUNT(*) FROM \"Case\";' 2>/dev/null || true)"
+  $count = Parse-CaseCountOutput $raw
+  if ($null -ne $count) { return $count }
+
+  # 3) Node fallback (ensure server deps exist)
+  Run-SshQuiet "cd $REMOTE_DIR/server && (test -d node_modules/better-sqlite3 || npm install --omit=dev >/dev/null 2>&1 || true)" | Out-Null
+
   & scp @SSH_OPTS $COUNT_SCRIPT_LOCAL "${SERVER}:${COUNT_SCRIPT_REMOTE}" 2>&1 | Out-Null
   if ($LASTEXITCODE -ne 0) { return -1 }
 
-  # Run from server/ so node resolves better-sqlite3 from ./node_modules.
-  # Backtick before $? stops PowerShell from substituting its own exit status.
-  $raw = Run-SshQuiet "cd $REMOTE_DIR/server && node ./_deploy_count_$TS.cjs '$dbRemote' 2>&1; echo __NODE_RC__`$?"
+  $raw = Run-SshQuiet "cd $REMOTE_DIR/server && node ./_deploy_count_$TS.cjs 'prisma/dev.db' 2>&1; echo __NODE_RC__`$?"
   & ssh @SSH_OPTS $SERVER "rm -f '$COUNT_SCRIPT_REMOTE'" 2>&1 | Out-Null
 
   $clean = ($raw -replace '__NODE_RC__\S+\s*$', '').Trim()
-  $countLine = ($clean -split "`n" | Where-Object { $_ -match '^\d+$' } | Select-Object -First 1)
-  if ($countLine) { return [int]$countLine }
+  $count = Parse-CaseCountOutput $clean
+  if ($null -ne $count) { return $count }
 
   if ($clean) {
-    Write-Host ('[count_cases.cjs output on server]:') -ForegroundColor DarkYellow
+    Write-Host '[count_cases.cjs on server]:' -ForegroundColor DarkYellow
     Write-Host $clean -ForegroundColor DarkYellow
   }
   return -1
