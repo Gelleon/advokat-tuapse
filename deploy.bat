@@ -1,9 +1,7 @@
 @echo off
 REM ============================================================
-REM Простая обёртка: запускает PowerShell-скрипт deploy.ps1
-REM с обходом ExecutionPolicy, чтобы не было ошибок политики.
-REM Перед деплоем: git commit + push, затем обновление на сервере.
-REM Окно остаётся открытым до нажатия клавиши; вывод пишется в deploy.last.log
+REM Запуск deploy.ps1 без пауз и без интерактивных запросов.
+REM Маркеры начала/конца — в deploy.last.log
 REM ============================================================
 
 set "LOG_FILE=%~dp0deploy.last.log"
@@ -17,7 +15,5 @@ if %RC% NEQ 0 (
 ) else (
   echo Deploy completed successfully.
 )
-echo Full log: %LOG_FILE%
-echo.
-pause
+echo Log markers: %LOG_FILE%
 exit /b %RC%

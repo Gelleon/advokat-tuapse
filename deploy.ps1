@@ -13,37 +13,25 @@
 
 $ErrorActionPreference = 'Stop'
 
+# Локально: без интерактивных запросов git/npm
+$env:GIT_TERMINAL_PROMPT = '0'
+$env:GIT_PAGER = 'cat'
+$env:CI = 'true'
+
 $LOG_FILE = Join-Path $PSScriptRoot 'deploy.last.log'
-$script:TranscriptActive = $false
 
 function Start-DeployLog {
   try {
-    # Закрываем зависшую транскрипцию от прошлого запуска (частая причина сбоя).
-    try { Stop-Transcript -ErrorAction SilentlyContinue | Out-Null } catch {}
-
-    if (Test-Path -LiteralPath $LOG_FILE) {
-      Remove-Item -LiteralPath $LOG_FILE -Force -ErrorAction SilentlyContinue
-    }
-
-    Start-Transcript -Path $LOG_FILE -Force -ErrorAction Stop | Out-Null
-    $script:TranscriptActive = $true
+    Set-Content -LiteralPath $LOG_FILE -Value ("=== Deploy started {0} ===`r`n" -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')) -Encoding UTF8
   } catch {
-    Write-Host ("Warning: file log unavailable ({0}). Continuing in console only." -f $_.Exception.Message) -ForegroundColor Yellow
-    try {
-      Set-Content -LiteralPath $LOG_FILE -Value ("Deploy started at {0}`r`nTranscript unavailable: {1}`r`n" -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $_.Exception.Message) -Encoding UTF8
-    } catch {}
+    Write-Host ("Warning: cannot write log file ({0}). Continuing." -f $_.Exception.Message) -ForegroundColor Yellow
   }
 }
 
 function Stop-DeployLog {
-  if (-not $script:TranscriptActive) { return }
   try {
-    Stop-Transcript -ErrorAction SilentlyContinue | Out-Null
-  } catch {
-    # ignore stop errors
-  } finally {
-    $script:TranscriptActive = $false
-  }
+    Add-Content -LiteralPath $LOG_FILE -Value ("=== Deploy finished {0} ===`r`n" -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')) -Encoding UTF8
+  } catch {}
 }
 
 Start-DeployLog
@@ -233,8 +221,19 @@ $env:DISPLAY             = ':0'
 $SERVER_PASSWORD = $null
 [System.GC]::Collect()
 
-# SSH options
-$SSH_OPTS = @('-o', 'StrictHostKeyChecking=accept-new', '-o', 'BatchMode=no')
+# SSH options — без TTY, чтобы ssh/scp не ждали Enter между командами
+$SSH_OPTS = @(
+  '-o', 'StrictHostKeyChecking=accept-new',
+  '-o', 'BatchMode=no',
+  '-o', 'RequestTTY=no',
+  '-o', 'ConnectTimeout=30',
+  '-o', 'LogLevel=ERROR'
+)
+
+function Wrap-RemoteCommand {
+  param([string]$Cmd)
+  return "export GIT_TERMINAL_PROMPT=0 GIT_PAGER=cat CI=true NPM_CONFIG_FUND=false NPM_CONFIG_AUDIT=false DEBIAN_FRONTEND=noninteractive; $Cmd"
+}
 
 function Convert-NativeOutput {
   param([object[]]$Records)
@@ -248,7 +247,8 @@ function Invoke-SshCapture {
   $prevEAP = $ErrorActionPreference
   $ErrorActionPreference = 'Continue'
   try {
-    $out = Convert-NativeOutput (& ssh @SSH_OPTS $SERVER $Cmd 2>&1)
+    $remoteCmd = Wrap-RemoteCommand $Cmd
+    $out = Convert-NativeOutput (& ssh @SSH_OPTS $SERVER $remoteCmd 2>&1)
     return @{ Out = ($out -join "`n").Trim(); RC = $LASTEXITCODE }
   } finally {
     $ErrorActionPreference = $prevEAP
@@ -274,16 +274,17 @@ function Run-SshWithRC {
   $prevEAP = $ErrorActionPreference
   $ErrorActionPreference = 'Continue'
   try {
-    $out = Convert-NativeOutput (& ssh @SSH_OPTS $SERVER "echo __RC__`$?`necho __OUT__`n$Cmd" 2>&1)
-    $text = ($out -join "`n")
-    $rcLine = ($text | Select-String -Pattern '^__RC__-?\d+$' | Select-Object -First 1).Line
-    $stdout = ($text -replace '^__RC__-?\d+\s*', '' -replace '^__OUT__\s*', '')
-    if ($rcLine) {
-      $rc = [int]($rcLine -replace '^__RC__', '')
+    $remoteCmd = Wrap-RemoteCommand "$Cmd; echo __DEPLOY_RC__`$?"
+    $out = Convert-NativeOutput (& ssh @SSH_OPTS $SERVER $remoteCmd 2>&1)
+    $text = ($out -join "`n").Trim()
+    $rcLine = ($text | Select-String -Pattern '__DEPLOY_RC__-?\d+\s*$' | Select-Object -First 1).Line
+    $stdout = ($text -replace '__DEPLOY_RC__-?\d+\s*$', '').Trim()
+    if ($rcLine -match '__DEPLOY_RC__(-?\d+)') {
+      $rc = [int]$Matches[1]
     } else {
       $rc = $LASTEXITCODE
     }
-    return @{ RC = $rc; Out = $stdout.Trim() }
+    return @{ RC = $rc; Out = $stdout }
   } finally {
     $ErrorActionPreference = $prevEAP
   }
@@ -436,10 +437,11 @@ if ([string]::IsNullOrWhiteSpace($dangerous)) {
 } else {
   Write-Host 'WARNING: dangerous deploy step detected on the server:' -ForegroundColor Red
   Write-Host $dangerous -ForegroundColor Red
-  $ans = Read-Host 'Type SKIP to continue anyway, or anything else to abort'
-  if ($ans -ne 'SKIP') {
-    Write-Host 'Aborted by user. Database untouched.' -ForegroundColor Yellow
-    Exit-Deploy 2
+  $skipGuard = $cfg['DEPLOY_SKIP_GUARD']
+  if ($skipGuard -eq '1' -or $skipGuard -eq 'true' -or $skipGuard -eq 'yes') {
+    Write-Host 'DEPLOY_SKIP_GUARD is set — continuing without prompt.' -ForegroundColor Yellow
+  } else {
+    throw 'Dangerous deploy step detected. Aborting. Set DEPLOY_SKIP_GUARD=1 in deploy.env to override.'
   }
 }
 
@@ -472,9 +474,9 @@ if ($restoreResult.Out -match 'DB_RESTORED') {
 Write-Host ''
 Write-Host '=== [6/8] Install dependencies ===' -ForegroundColor Cyan
 # Server: production deps only (prisma CLI is in dependencies).
-Run-Ssh "cd $REMOTE_DIR/server && (npm ci --omit=dev 2>/dev/null || npm install --omit=dev)"
+Run-Ssh "cd $REMOTE_DIR/server && (npm ci --omit=dev --no-fund --no-audit 2>/dev/null || npm install --omit=dev --no-fund --no-audit)"
 # Frontend: full install — vite/tailwind/typescript are devDependencies but required for build.
-Run-Ssh "cd $REMOTE_DIR && (npm ci 2>/dev/null || npm install)"
+Run-Ssh "cd $REMOTE_DIR && (npm ci --no-fund --no-audit 2>/dev/null || npm install --no-fund --no-audit)"
 
 # ---- Step 5: Apply migrations WITHOUT data loss ---------------
 
@@ -503,12 +505,12 @@ $baselineRc = Run-SshWithRC "cd $REMOTE_DIR/server && node ./_deploy_baseline_$T
 
 if ($baselineRc.RC -eq 2) {
   Write-Host 'Existing DB without migration history — baselining init migration ...' -ForegroundColor Yellow
-  Run-Ssh "cd $REMOTE_DIR/server && npx prisma migrate resolve --applied 20260710110551_init"
+  Run-Ssh "cd $REMOTE_DIR/server && npx --yes prisma migrate resolve --applied 20260710110551_init"
 }
 
-Run-Ssh "cd $REMOTE_DIR/server && npx prisma migrate deploy"
+Run-Ssh "cd $REMOTE_DIR/server && npx --yes prisma migrate deploy"
 # Make sure the typed client exists so the server actually runs.
-Run-Ssh "cd $REMOTE_DIR/server && npx prisma generate"
+Run-Ssh "cd $REMOTE_DIR/server && npx --yes prisma generate"
 
 # Build + restart
 Run-Ssh "cd $REMOTE_DIR && npm run build"
