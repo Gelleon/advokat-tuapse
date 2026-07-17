@@ -14,7 +14,39 @@
 $ErrorActionPreference = 'Stop'
 
 $LOG_FILE = Join-Path $PSScriptRoot 'deploy.last.log'
-Start-Transcript -Path $LOG_FILE -Force | Out-Null
+$script:TranscriptActive = $false
+
+function Start-DeployLog {
+  try {
+    # Закрываем зависшую транскрипцию от прошлого запуска (частая причина сбоя).
+    try { Stop-Transcript -ErrorAction SilentlyContinue | Out-Null } catch {}
+
+    if (Test-Path -LiteralPath $LOG_FILE) {
+      Remove-Item -LiteralPath $LOG_FILE -Force -ErrorAction SilentlyContinue
+    }
+
+    Start-Transcript -Path $LOG_FILE -Force -ErrorAction Stop | Out-Null
+    $script:TranscriptActive = $true
+  } catch {
+    Write-Host ("Warning: file log unavailable ({0}). Continuing in console only." -f $_.Exception.Message) -ForegroundColor Yellow
+    try {
+      Set-Content -LiteralPath $LOG_FILE -Value ("Deploy started at {0}`r`nTranscript unavailable: {1}`r`n" -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $_.Exception.Message) -Encoding UTF8
+    } catch {}
+  }
+}
+
+function Stop-DeployLog {
+  if (-not $script:TranscriptActive) { return }
+  try {
+    Stop-Transcript -ErrorAction SilentlyContinue | Out-Null
+  } catch {
+    # ignore stop errors
+  } finally {
+    $script:TranscriptActive = $false
+  }
+}
+
+Start-DeployLog
 
 trap {
   Write-Host ''
@@ -23,13 +55,13 @@ trap {
   if ($_.ScriptStackTrace) {
     Write-Host $_.ScriptStackTrace -ForegroundColor DarkRed
   }
-  Stop-Transcript | Out-Null
+  Stop-DeployLog
   exit 1
 }
 
 function Exit-Deploy {
   param([int]$Code = 0)
-  Stop-Transcript | Out-Null
+  Stop-DeployLog
   exit $Code
 }
 
