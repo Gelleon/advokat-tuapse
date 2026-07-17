@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { usePosts, Post } from '../../store/usePosts';
 import { Trash2, Edit2, X, Image as ImageIcon, Calendar, Sparkles, Loader2, Send, ChevronDown, Save } from 'lucide-react';
-import { API_URL } from '../../config';
+import { API_URL, BASE_URL } from '../../config';
 import { PRACTICE_AREA_OPTIONS } from '../../data/practiceAreas';
 import { BLOG_PROMPT_SETTING_KEY, DEFAULT_BLOG_PROMPT } from '../../data/blogPrompt';
+import { IMAGE_PROMPT_SETTING_KEY, DEFAULT_IMAGE_PROMPT } from '../../data/imagePrompt';
 
 const nowLocalInput = () => {
   const d = new Date();
@@ -35,6 +36,7 @@ const BlogAdmin = () => {
   const [formData, setFormData] = useState<Partial<Post>>(initialFormState);
   const [tagInput, setTagInput] = useState('');
   const [thumbnailName, setThumbnailName] = useState('');
+  const [existingThumbnailUrl, setExistingThumbnailUrl] = useState('');
 
   const [practiceAreaId, setPracticeAreaId] = useState('auto');
   const [periodType, setPeriodType] = useState<'weekly' | 'monthly'>('weekly');
@@ -43,6 +45,7 @@ const BlogAdmin = () => {
 
   const [showPromptEditor, setShowPromptEditor] = useState(false);
   const [blogPrompt, setBlogPrompt] = useState(DEFAULT_BLOG_PROMPT);
+  const [imagePrompt, setImagePrompt] = useState(DEFAULT_IMAGE_PROMPT);
   const [isPromptLoading, setIsPromptLoading] = useState(false);
   const [isPromptSaving, setIsPromptSaving] = useState(false);
 
@@ -50,15 +53,20 @@ const BlogAdmin = () => {
     const loadPrompt = async () => {
       setIsPromptLoading(true);
       try {
-        const response = await fetch(`${API_URL}/settings/${BLOG_PROMPT_SETTING_KEY}`, {
-          credentials: 'include',
-        });
-        if (response.ok) {
-          const data = await response.json();
+        const [blogRes, imageRes] = await Promise.all([
+          fetch(`${API_URL}/settings/${BLOG_PROMPT_SETTING_KEY}`, { credentials: 'include' }),
+          fetch(`${API_URL}/settings/${IMAGE_PROMPT_SETTING_KEY}`, { credentials: 'include' }),
+        ]);
+        if (blogRes.ok) {
+          const data = await blogRes.json();
           setBlogPrompt(data.value || DEFAULT_BLOG_PROMPT);
         }
+        if (imageRes.ok) {
+          const data = await imageRes.json();
+          setImagePrompt(data.value || DEFAULT_IMAGE_PROMPT);
+        }
       } catch (error) {
-        console.error('Failed to load blog prompt:', error);
+        console.error('Failed to load prompts:', error);
       } finally {
         setIsPromptLoading(false);
       }
@@ -66,19 +74,27 @@ const BlogAdmin = () => {
     loadPrompt();
   }, []);
 
-  const saveBlogPrompt = async () => {
+  const saveBlogPrompts = async () => {
     setIsPromptSaving(true);
     try {
-      const response = await fetch(`${API_URL}/settings/${BLOG_PROMPT_SETTING_KEY}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ value: blogPrompt }),
-      });
-      if (!response.ok) throw new Error('save failed');
-      setAgentMessage({ text: 'Промпт генерации сохранён и будет использован при следующей генерации.', type: 'success' });
+      const [blogRes, imageRes] = await Promise.all([
+        fetch(`${API_URL}/settings/${BLOG_PROMPT_SETTING_KEY}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ value: blogPrompt }),
+        }),
+        fetch(`${API_URL}/settings/${IMAGE_PROMPT_SETTING_KEY}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ value: imagePrompt }),
+        }),
+      ]);
+      if (!blogRes.ok || !imageRes.ok) throw new Error('save failed');
+      setAgentMessage({ text: 'Промпты статьи и обложки сохранены.', type: 'success' });
     } catch {
-      setAgentMessage({ text: 'Не удалось сохранить промпт', type: 'error' });
+      setAgentMessage({ text: 'Не удалось сохранить промпты', type: 'error' });
     } finally {
       setIsPromptSaving(false);
     }
@@ -144,6 +160,7 @@ const BlogAdmin = () => {
       metaDescription: post.metaDescription,
     });
     setThumbnailName(post.thumbnailUrl ? 'Изображение загружено' : '');
+    setExistingThumbnailUrl(post.thumbnailUrl || '');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -152,6 +169,7 @@ const BlogAdmin = () => {
     setFormData(initialFormState);
     setTagInput('');
     setThumbnailName('');
+    setExistingThumbnailUrl('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -192,12 +210,15 @@ const BlogAdmin = () => {
         metaTitle: post.metaTitle || '',
         metaDescription: post.metaDescription || ''
       });
-      setThumbnailName('');
+      setExistingThumbnailUrl(post.thumbnailUrl || '');
+      setThumbnailName(post.thumbnailUrl ? 'AI-обложка сгенерирована' : '');
       if (fileInputRef.current) fileInputRef.current.value = '';
 
       await refreshPosts();
       setAgentMessage({
-        text: `Черновик создан по документу: ${data.source?.complexName || data.source?.eoNumber}. Проверьте текст и нажмите «Опубликовать на сайте».`,
+        text: post.thumbnailUrl
+          ? `Черновик и обложка созданы по документу: ${data.source?.complexName || data.source?.eoNumber}. Проверьте и опубликуйте.`
+          : `Черновик создан, но обложку сгенерировать не удалось. Можно загрузить фото вручную. Источник: ${data.source?.complexName || data.source?.eoNumber}.`,
         type: 'success'
       });
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -281,7 +302,7 @@ const BlogAdmin = () => {
               AI-агент блога
             </h2>
             <p className="text-sm text-slate-500 mt-1">
-              Ищет свежие акты на publication.pravo.gov.ru, пишет понятную SEO-статью и сохраняет черновик.
+              Ищет акты на publication.pravo.gov.ru, пишет SEO-статью, генерирует обложку и сохраняет черновик.
             </p>
           </div>
         </div>
@@ -320,7 +341,7 @@ const BlogAdmin = () => {
               className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-400 text-white px-6 py-2.5 rounded-lg font-semibold transition-colors"
             >
               {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-              {isGenerating ? 'Генерируем…' : 'Сгенерировать черновик'}
+              {isGenerating ? 'Генерируем текст и обложку…' : 'Сгенерировать черновик'}
             </button>
           </div>
         </div>
@@ -338,45 +359,69 @@ const BlogAdmin = () => {
             className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
           >
             <ChevronDown className={`w-4 h-4 transition-transform ${showPromptEditor ? 'rotate-180' : ''}`} />
-            Промпт генерации статьи
+            Промпты статьи и обложки
           </button>
 
           {showPromptEditor && (
-            <div className="mt-4 space-y-3">
-              <p className="text-xs text-slate-500">
-                Плейсхолдеры: <code className="bg-slate-100 px-1 rounded">{'{practiceArea}'}</code>,{' '}
-                <code className="bg-slate-100 px-1 rounded">{'{practiceDescription}'}</code>,{' '}
-                <code className="bg-slate-100 px-1 rounded">{'{practiceFeatures}'}</code>,{' '}
-                <code className="bg-slate-100 px-1 rounded">{'{sourceBrief}'}</code>
-              </p>
+            <div className="mt-4 space-y-5">
               {isPromptLoading ? (
                 <div className="flex items-center gap-2 text-sm text-slate-500">
-                  <Loader2 className="w-4 h-4 animate-spin" /> Загрузка промпта…
+                  <Loader2 className="w-4 h-4 animate-spin" /> Загрузка промптов…
                 </div>
               ) : (
-                <textarea
-                  value={blogPrompt}
-                  onChange={(e) => setBlogPrompt(e.target.value)}
-                  rows={10}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none font-mono text-xs"
-                />
+                <>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-slate-700">Текст статьи</p>
+                    <p className="text-xs text-slate-500">
+                      Плейсхолдеры: <code className="bg-slate-100 px-1 rounded">{'{practiceArea}'}</code>,{' '}
+                      <code className="bg-slate-100 px-1 rounded">{'{practiceDescription}'}</code>,{' '}
+                      <code className="bg-slate-100 px-1 rounded">{'{practiceFeatures}'}</code>,{' '}
+                      <code className="bg-slate-100 px-1 rounded">{'{sourceBrief}'}</code>
+                    </p>
+                    <textarea
+                      value={blogPrompt}
+                      onChange={(e) => setBlogPrompt(e.target.value)}
+                      rows={8}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none font-mono text-xs"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-slate-700">Обложка (Recraft / RouterAI)</p>
+                    <p className="text-xs text-slate-500">
+                      Плейсхолдеры: <code className="bg-slate-100 px-1 rounded">{'{title}'}</code>,{' '}
+                      <code className="bg-slate-100 px-1 rounded">{'{previewText}'}</code>,{' '}
+                      <code className="bg-slate-100 px-1 rounded">{'{practiceArea}'}</code>,{' '}
+                      <code className="bg-slate-100 px-1 rounded">{'{category}'}</code>
+                    </p>
+                    <textarea
+                      value={imagePrompt}
+                      onChange={(e) => setImagePrompt(e.target.value)}
+                      rows={8}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none font-mono text-xs"
+                    />
+                  </div>
+                </>
               )}
               <div className="flex flex-wrap gap-3">
                 <button
                   type="button"
-                  onClick={saveBlogPrompt}
+                  onClick={saveBlogPrompts}
                   disabled={isPromptSaving || isPromptLoading}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-sm font-medium disabled:opacity-60"
                 >
                   {isPromptSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  Сохранить промпт
+                  Сохранить промпты
                 </button>
                 <button
                   type="button"
-                  onClick={() => setBlogPrompt(DEFAULT_BLOG_PROMPT)}
+                  onClick={() => {
+                    setBlogPrompt(DEFAULT_BLOG_PROMPT);
+                    setImagePrompt(DEFAULT_IMAGE_PROMPT);
+                  }}
                   className="px-4 py-2 text-sm text-slate-600 hover:text-slate-900"
                 >
-                  Сбросить к стандартному
+                  Сбросить к стандартным
                 </button>
               </div>
             </div>
@@ -485,6 +530,13 @@ const BlogAdmin = () => {
                 </button>
               </div>
               {thumbnailName && <p className="text-xs text-green-600 mt-1 truncate">Выбран: {thumbnailName}</p>}
+              {existingThumbnailUrl && (
+                <img
+                  src={`${BASE_URL}${existingThumbnailUrl}`}
+                  alt="Обложка"
+                  className="mt-2 w-full max-w-xs h-28 object-cover rounded-lg border border-slate-200"
+                />
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Статус</label>

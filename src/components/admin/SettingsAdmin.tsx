@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { API_URL } from '../../config';
 import { Save, Loader2, Info } from 'lucide-react';
 import { BLOG_PROMPT_SETTING_KEY, DEFAULT_BLOG_PROMPT } from '../../data/blogPrompt';
+import { IMAGE_PROMPT_SETTING_KEY, DEFAULT_IMAGE_PROMPT } from '../../data/imagePrompt';
 
 const DEFAULT_CASE_PROMPT =
   'Оптимизируй следующий текст для юридического портфолио, сделай его профессиональным, лаконичным и грамотным:\n\n{text}';
@@ -9,6 +10,7 @@ const DEFAULT_CASE_PROMPT =
 const SettingsAdmin = () => {
   const [casePrompt, setCasePrompt] = useState('');
   const [blogPrompt, setBlogPrompt] = useState('');
+  const [imagePrompt, setImagePrompt] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
@@ -19,9 +21,10 @@ const SettingsAdmin = () => {
 
   const fetchSettings = async () => {
     try {
-      const [caseRes, blogRes] = await Promise.all([
+      const [caseRes, blogRes, imageRes] = await Promise.all([
         fetch(`${API_URL}/settings/ai_prompt_template`, { credentials: 'include' }),
         fetch(`${API_URL}/settings/${BLOG_PROMPT_SETTING_KEY}`, { credentials: 'include' }),
+        fetch(`${API_URL}/settings/${IMAGE_PROMPT_SETTING_KEY}`, { credentials: 'include' }),
       ]);
 
       if (caseRes.ok) {
@@ -37,10 +40,18 @@ const SettingsAdmin = () => {
       } else {
         setBlogPrompt(DEFAULT_BLOG_PROMPT);
       }
+
+      if (imageRes.ok) {
+        const data = await imageRes.json();
+        setImagePrompt(data.value || DEFAULT_IMAGE_PROMPT);
+      } else {
+        setImagePrompt(DEFAULT_IMAGE_PROMPT);
+      }
     } catch (error) {
       console.error('Failed to fetch settings:', error);
       setCasePrompt(DEFAULT_CASE_PROMPT);
       setBlogPrompt(DEFAULT_BLOG_PROMPT);
+      setImagePrompt(DEFAULT_IMAGE_PROMPT);
     } finally {
       setIsLoading(false);
     }
@@ -52,7 +63,7 @@ const SettingsAdmin = () => {
     setMessage(null);
 
     try {
-      const [caseRes, blogRes] = await Promise.all([
+      const [caseRes, blogRes, imageRes] = await Promise.all([
         fetch(`${API_URL}/settings/ai_prompt_template`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -65,9 +76,15 @@ const SettingsAdmin = () => {
           body: JSON.stringify({ value: blogPrompt }),
           credentials: 'include',
         }),
+        fetch(`${API_URL}/settings/${IMAGE_PROMPT_SETTING_KEY}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ value: imagePrompt }),
+          credentials: 'include',
+        }),
       ]);
 
-      if (caseRes.ok && blogRes.ok) {
+      if (caseRes.ok && blogRes.ok && imageRes.ok) {
         setMessage({ text: 'Настройки успешно сохранены', type: 'success' });
       } else {
         throw new Error('Ошибка сохранения');
@@ -128,7 +145,7 @@ const SettingsAdmin = () => {
           <textarea
             value={blogPrompt}
             onChange={(e) => setBlogPrompt(e.target.value)}
-            rows={14}
+            rows={12}
             className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none font-mono text-sm"
             required
           />
@@ -138,6 +155,38 @@ const SettingsAdmin = () => {
             className="mt-2 text-sm text-slate-500 hover:text-amber-600 transition-colors"
           >
             Сбросить промпт блога к стандартному
+          </button>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            Промпт для генерации обложки статьи
+          </label>
+          <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-4 flex gap-3 text-sm text-blue-800">
+            <Info className="w-5 h-5 flex-shrink-0 text-blue-500" />
+            <div className="space-y-2">
+              <p>
+                Используется моделью Recraft через RouterAI при создании черновика.
+                Лучше писать промпт на английском — модели изображений так стабильнее.
+              </p>
+              <p className="font-mono text-xs">
+                {`{title}`} · {`{previewText}`} · {`{practiceArea}`} · {`{category}`}
+              </p>
+            </div>
+          </div>
+          <textarea
+            value={imagePrompt}
+            onChange={(e) => setImagePrompt(e.target.value)}
+            rows={12}
+            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none font-mono text-sm"
+            required
+          />
+          <button
+            type="button"
+            onClick={() => setImagePrompt(DEFAULT_IMAGE_PROMPT)}
+            className="mt-2 text-sm text-slate-500 hover:text-amber-600 transition-colors"
+          >
+            Сбросить промпт изображения к стандартному
           </button>
         </div>
 

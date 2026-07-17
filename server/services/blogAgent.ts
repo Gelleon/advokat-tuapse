@@ -15,6 +15,7 @@ import {
   getDocumentPublicUrl
 } from './pravoApi';
 import { slugify } from '../utils/slugify';
+import { generateBlogCoverImage } from './imageGenerator';
 
 const prisma = new PrismaClient();
 
@@ -363,6 +364,19 @@ export async function generateBlogDraft(input: BlogAgentInput = {}): Promise<Blo
   }
 
   const slug = await ensureUniqueSlug(article.slug || slugify(article.title));
+  const category = 'Отраслевые новости';
+
+  let thumbnailUrl: string | null = null;
+  try {
+    thumbnailUrl = await generateBlogCoverImage({
+      title: article.title,
+      previewText: article.previewText || article.metaDescription || '',
+      practiceArea: selected.area.title,
+      category
+    });
+  } catch (error) {
+    console.error('Cover image generation skipped due to error:', error);
+  }
 
   const created = await prisma.post.create({
     data: {
@@ -370,13 +384,14 @@ export async function generateBlogDraft(input: BlogAgentInput = {}): Promise<Blo
       slug,
       previewText: article.previewText || article.metaDescription || article.title,
       content: article.content,
-      category: 'Отраслевые новости',
+      category,
       tags: JSON.stringify(tags),
       author,
       status: 'DRAFT',
       publishedAt: null,
       metaTitle: article.metaTitle,
-      metaDescription: article.metaDescription
+      metaDescription: article.metaDescription,
+      thumbnailUrl
     }
   });
 
