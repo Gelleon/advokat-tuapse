@@ -552,7 +552,9 @@ function Restore-LatestRemoteDb {
 }
 
 function Restart-RemoteServer {
-  Run-Ssh "cd $REMOTE_DIR/server && (pm2 restart advokat-server 2>/dev/null || pm2 start npm --name advokat-server -- start) && pm2 save"
+  # Production API is PM2 app "advokat-api" (npx tsx index.ts on :5000).
+  # "advokat-server" is a broken leftover (npm start -> missing dist/index.js) — ignore it.
+  Run-Ssh "cd $REMOTE_DIR/server && (pm2 restart advokat-api 2>/dev/null || pm2 start bash --name advokat-api -- -c 'npx tsx index.ts') && pm2 save"
   Start-Sleep -Seconds 2
   $health = Run-SshQuiet "curl -fsS http://127.0.0.1:5000/api/health 2>/dev/null || true"
   if ($health -match '"ok"\s*:\s*true') {
