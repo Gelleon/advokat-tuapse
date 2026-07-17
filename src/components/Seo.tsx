@@ -15,6 +15,8 @@ interface SeoProps {
   type?: 'website' | 'article';
   noindex?: boolean;
   keywords?: string;
+  publishedTime?: string;
+  modifiedTime?: string;
   jsonLd?: object | object[];
 }
 
@@ -26,6 +28,8 @@ const Seo = ({
   type = 'website',
   noindex = false,
   keywords,
+  publishedTime,
+  modifiedTime,
   jsonLd,
 }: SeoProps) => {
   const url = `${SITE_URL}${path}`;
@@ -39,7 +43,7 @@ const Seo = ({
       <meta name="description" content={description} />
       {keywords && <meta name="keywords" content={keywords} />}
       <link rel="canonical" href={url} />
-      <meta name="robots" content={noindex ? 'noindex, nofollow' : 'index, follow'} />
+      <meta name="robots" content={noindex ? 'noindex, nofollow' : 'index, follow, max-snippet:-1, max-image-preview:large'} />
 
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
@@ -48,6 +52,12 @@ const Seo = ({
       <meta property="og:site_name" content={SITE_NAME} />
       <meta property="og:locale" content="ru_RU" />
       <meta property="og:image" content={ogImage} />
+      {type === 'article' && publishedTime && (
+        <meta property="article:published_time" content={publishedTime} />
+      )}
+      {type === 'article' && modifiedTime && (
+        <meta property="article:modified_time" content={modifiedTime} />
+      )}
 
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={title} />

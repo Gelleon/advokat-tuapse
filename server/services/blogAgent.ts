@@ -1,6 +1,11 @@
 import { PrismaClient } from '@prisma/client';
 import { PRACTICE_AREAS, PracticeArea, getPracticeArea } from '../data/practiceAreas';
 import {
+  BLOG_PROMPT_SETTING_KEY,
+  DEFAULT_BLOG_PROMPT,
+  renderBlogPrompt
+} from '../data/blogPrompt';
+import {
   PravoDocument,
   PravoDocumentDetails,
   PravoPeriodType,
@@ -175,36 +180,21 @@ function buildSourceBrief(details: PravoDocumentDetails): string {
   ].join('\n');
 }
 
-function buildPrompt(area: PracticeArea, brief: string): string {
-  return `Ты — юридический копирайтер адвокатского бюро «Адвокаты Туапсе».
-Напиши SEO-статью для блога сайта на основе официально опубликованного правового акта.
+async function getBlogPromptTemplate(): Promise<string> {
+  const setting = await prisma.setting.findUnique({
+    where: { key: BLOG_PROMPT_SETTING_KEY }
+  });
+  return setting?.value?.trim() || DEFAULT_BLOG_PROMPT;
+}
 
-Направление практики бюро: ${area.title}
-Описание направления: ${area.description}
-Типовые услуги: ${area.features.join('; ')}
-
-Данные об официальном документе (источник publication.pravo.gov.ru):
-${brief}
-
-Требования к статье:
-1. Пиши простым понятным русским языком для человека без юридического образования.
-2. Объясни: что изменилось / о чём документ, кому это важно, какие практические выводы, когда стоит обратиться к адвокату.
-3. Не выдумывай нормы, даты, номера статей и последствия, которых нет в исходных данных. Если полного текста нет — опирайся только на название и реквизиты, и прямо скажи, что детали нужно смотреть в официальной публикации.
-4. Структура HTML: используй <h2>, <p>, <ul><li>. Без <html>, <body>, <h1>.
-5. В конце добавь короткий дисклеймер: материал носит информационный характер и не является индивидуальной юридической консультацией.
-6. В конце добавь абзац со ссылкой на официальную публикацию (используй точный URL из данных).
-7. SEO: естественные ключи по теме «${area.title}», Туапсе/Краснодарский край уместно упомянуть 1 раз, без переспама.
-
-Верни ТОЛЬКО валидный JSON без markdown-обёртки:
-{
-  "title": "заголовок до 80 символов",
-  "slug": "translit-url-slug-latin",
-  "previewText": "краткое превью 1-2 предложения",
-  "content": "HTML текст статьи",
-  "metaTitle": "SEO title до 60 символов",
-  "metaDescription": "SEO description до 160 символов",
-  "tags": ["тег1", "тег2", "тег3"]
-}`;
+async function buildPrompt(area: PracticeArea, brief: string): Promise<string> {
+  const template = await getBlogPromptTemplate();
+  return renderBlogPrompt(template, {
+    practiceArea: area.title,
+    practiceDescription: area.description,
+    practiceFeatures: area.features.join('; '),
+    sourceBrief: brief
+  });
 }
 
 async function callRouterAI(prompt: string): Promise<string> {
@@ -229,7 +219,7 @@ async function callRouterAI(prompt: string): Promise<string> {
         messages: [
           {
             role: 'system',
-            content: 'Ты помощник для подготовки SEO-статей юридического блога. Отвечай только валидным JSON.'
+            content: 'Ты редактор правового новостного блога. Пиши ясно, по делу, в стиле деловых СМИ. Отвечай только валидным JSON.'
           },
           { role: 'user', content: prompt }
         ]
@@ -303,11 +293,12 @@ export async function generateBlogDraft(input: BlogAgentInput = {}): Promise<Blo
   const selected = ranked[0];
   const details = await getDocumentDetails(selected.doc.eoNumber);
   const brief = buildSourceBrief(details);
-  const prompt = buildPrompt(selected.area, brief);
+  const prompt = await buildPrompt(selected.area, brief);
   const aiRaw = await callRouterAI(prompt);
   const article = parseArticleJson(aiRaw);
 
   const sourceUrl = getDocumentPublicUrl(details.eoNumber);
+  const sourceTitle = details.complexName?.replace(/<br\s*\/?>/gi, ' ') || details.name || sourceUrl;
   const tags = Array.from(new Set([
     selected.area.title,
     'Изменения законодательства',
@@ -315,13 +306,20 @@ export async function generateBlogDraft(input: BlogAgentInput = {}): Promise<Blo
     ...article.tags
   ])).slice(0, 10);
 
-  // Гарантируем наличие ссылки на источник в тексте
   if (!article.content.includes(sourceUrl)) {
-    article.content += `<p>Официальная публикация: <a href="${sourceUrl}" target="_blank" rel="noopener noreferrer">${details.complexName?.replace(/<br\s*\/?>/gi, ' ') || sourceUrl}</a></p>`;
+    article.content += `<p class="article-source">Официальная публикация: <a href="${sourceUrl}" target="_blank" rel="noopener noreferrer">${sourceTitle}</a></p>`;
   }
 
   if (!article.content.toLowerCase().includes('информацион')) {
-    article.content += '<p><em>Материал носит информационный характер и не является индивидуальной юридической консультацией.</em></p>';
+    article.content += '<p class="article-disclaimer">Материал носит информационный характер и не является индивидуальной юридической консультацией.</p>';
+  }
+
+  // Если модель не поставила lead — обернём первый абзац
+  if (!article.content.includes('class="lead"')) {
+    article.content = article.content.replace(
+      /<p(\s[^>]*)?>/,
+      '<p class="lead"$1>'
+    );
   }
 
   const slug = await ensureUniqueSlug(article.slug || slugify(article.title));
@@ -362,3 +360,5 @@ export async function generateBlogDraft(input: BlogAgentInput = {}): Promise<Blo
 export function listPracticeAreasForApi() {
   return PRACTICE_AREAS.map(({ id, title, description }) => ({ id, title, description }));
 }
+
+export { DEFAULT_BLOG_PROMPT, BLOG_PROMPT_SETTING_KEY };

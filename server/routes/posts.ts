@@ -79,7 +79,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Получить пост по slug
+// Получить пост по slug (публично — только опубликованные)
 router.get('/:slug', async (req, res) => {
   try {
     const { slug } = req.params;
@@ -88,6 +88,14 @@ router.get('/:slug', async (req, res) => {
     });
 
     if (!post) {
+      return res.status(404).json({ error: 'Пост не найден' });
+    }
+
+    const isPublished =
+      post.status === 'PUBLISHED' &&
+      (!post.publishedAt || post.publishedAt.getTime() <= Date.now());
+
+    if (!isPublished && req.query.isAdmin !== 'true') {
       return res.status(404).json({ error: 'Пост не найден' });
     }
 

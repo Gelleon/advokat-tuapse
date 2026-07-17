@@ -1,8 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { usePosts, Post } from '../../store/usePosts';
-import { Trash2, Edit2, X, Image as ImageIcon, Calendar, Sparkles, Loader2, Send } from 'lucide-react';
+import { Trash2, Edit2, X, Image as ImageIcon, Calendar, Sparkles, Loader2, Send, ChevronDown, Save } from 'lucide-react';
 import { API_URL } from '../../config';
 import { PRACTICE_AREA_OPTIONS } from '../../data/practiceAreas';
+import { BLOG_PROMPT_SETTING_KEY, DEFAULT_BLOG_PROMPT } from '../../data/blogPrompt';
 
 const nowLocalInput = () => {
   const d = new Date();
@@ -39,6 +40,49 @@ const BlogAdmin = () => {
   const [periodType, setPeriodType] = useState<'weekly' | 'monthly'>('weekly');
   const [isGenerating, setIsGenerating] = useState(false);
   const [agentMessage, setAgentMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  const [showPromptEditor, setShowPromptEditor] = useState(false);
+  const [blogPrompt, setBlogPrompt] = useState(DEFAULT_BLOG_PROMPT);
+  const [isPromptLoading, setIsPromptLoading] = useState(false);
+  const [isPromptSaving, setIsPromptSaving] = useState(false);
+
+  useEffect(() => {
+    const loadPrompt = async () => {
+      setIsPromptLoading(true);
+      try {
+        const response = await fetch(`${API_URL}/settings/${BLOG_PROMPT_SETTING_KEY}`, {
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setBlogPrompt(data.value || DEFAULT_BLOG_PROMPT);
+        }
+      } catch (error) {
+        console.error('Failed to load blog prompt:', error);
+      } finally {
+        setIsPromptLoading(false);
+      }
+    };
+    loadPrompt();
+  }, []);
+
+  const saveBlogPrompt = async () => {
+    setIsPromptSaving(true);
+    try {
+      const response = await fetch(`${API_URL}/settings/${BLOG_PROMPT_SETTING_KEY}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ value: blogPrompt }),
+      });
+      if (!response.ok) throw new Error('save failed');
+      setAgentMessage({ text: 'Промпт генерации сохранён и будет использован при следующей генерации.', type: 'success' });
+    } catch {
+      setAgentMessage({ text: 'Не удалось сохранить промпт', type: 'error' });
+    } finally {
+      setIsPromptSaving(false);
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -286,6 +330,58 @@ const BlogAdmin = () => {
             {agentMessage.text}
           </div>
         )}
+
+        <div className="mt-5 border-t border-slate-100 pt-4">
+          <button
+            type="button"
+            onClick={() => setShowPromptEditor((v) => !v)}
+            className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+          >
+            <ChevronDown className={`w-4 h-4 transition-transform ${showPromptEditor ? 'rotate-180' : ''}`} />
+            Промпт генерации статьи
+          </button>
+
+          {showPromptEditor && (
+            <div className="mt-4 space-y-3">
+              <p className="text-xs text-slate-500">
+                Плейсхолдеры: <code className="bg-slate-100 px-1 rounded">{'{practiceArea}'}</code>,{' '}
+                <code className="bg-slate-100 px-1 rounded">{'{practiceDescription}'}</code>,{' '}
+                <code className="bg-slate-100 px-1 rounded">{'{practiceFeatures}'}</code>,{' '}
+                <code className="bg-slate-100 px-1 rounded">{'{sourceBrief}'}</code>
+              </p>
+              {isPromptLoading ? (
+                <div className="flex items-center gap-2 text-sm text-slate-500">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Загрузка промпта…
+                </div>
+              ) : (
+                <textarea
+                  value={blogPrompt}
+                  onChange={(e) => setBlogPrompt(e.target.value)}
+                  rows={10}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none font-mono text-xs"
+                />
+              )}
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={saveBlogPrompt}
+                  disabled={isPromptSaving || isPromptLoading}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-sm font-medium disabled:opacity-60"
+                >
+                  {isPromptSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Сохранить промпт
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBlogPrompt(DEFAULT_BLOG_PROMPT)}
+                  className="px-4 py-2 text-sm text-slate-600 hover:text-slate-900"
+                >
+                  Сбросить к стандартному
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

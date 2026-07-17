@@ -41,6 +41,146 @@
   .transform-3d {
     transform-style: preserve-3d;
   }
+
+  /* Новостная типографика статей блога */
+  .article-body {
+    max-width: 42rem;
+    color: #1f2937;
+    font-size: 1.125rem;
+    line-height: 1.8;
+    font-weight: 400;
+  }
+
+  .article-body > *:first-child {
+    margin-top: 0;
+  }
+
+  .article-body .lead {
+    font-size: 1.35rem;
+    line-height: 1.65;
+    color: #111827;
+    font-weight: 500;
+    margin: 0 0 2rem;
+    padding-bottom: 1.75rem;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .article-body h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.65rem;
+    line-height: 1.3;
+    font-weight: 700;
+    color: #111827;
+    margin: 2.75rem 0 1rem;
+    letter-spacing: -0.01em;
+  }
+
+  .article-body h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.35rem;
+    line-height: 1.35;
+    font-weight: 700;
+    color: #111827;
+    margin: 2.25rem 0 0.75rem;
+  }
+
+  .article-body p {
+    margin: 0 0 1.25rem;
+    color: #374151;
+  }
+
+  .article-body ul,
+  .article-body ol {
+    margin: 0 0 1.5rem;
+    padding-left: 1.35rem;
+  }
+
+  .article-body li {
+    margin-bottom: 0.55rem;
+    color: #374151;
+    padding-left: 0.25rem;
+  }
+
+  .article-body ul {
+    list-style: none;
+    padding-left: 0;
+  }
+
+  .article-body ul li {
+    position: relative;
+    padding-left: 1.35rem;
+  }
+
+  .article-body ul li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.7em;
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 9999px;
+    background: #C5A880;
+  }
+
+  .article-body ol {
+    list-style: decimal;
+  }
+
+  .article-body a {
+    color: #A3875E;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    transition: color 0.2s ease;
+  }
+
+  .article-body a:hover {
+    color: #111827;
+  }
+
+  .article-body strong {
+    color: #111827;
+    font-weight: 600;
+  }
+
+  .article-body .article-note {
+    display: block;
+    margin: 2rem 0;
+    padding: 1.25rem 1.5rem;
+    background: #F9FAFB;
+    border-left: 3px solid #C5A880;
+    color: #1f2937;
+    font-size: 1.05rem;
+    line-height: 1.65;
+  }
+
+  .article-body .article-source {
+    margin-top: 2.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e5e7eb;
+    font-size: 0.95rem;
+    color: #6b7280;
+  }
+
+  .article-body .article-disclaimer {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    line-height: 1.55;
+    color: #9ca3af;
+    font-style: italic;
+  }
+
+  .article-body em {
+    font-style: italic;
+  }
+
+  .article-body blockquote {
+    margin: 2rem 0;
+    padding: 0.25rem 0 0.25rem 1.25rem;
+    border-left: 3px solid #C5A880;
+    color: #4b5563;
+    font-size: 1.15rem;
+    line-height: 1.7;
+  }
 }
 
 @layer utilities {
