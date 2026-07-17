@@ -372,7 +372,8 @@ export async function generateBlogDraft(input: BlogAgentInput = {}): Promise<Blo
     title: article.title,
     previewText: article.previewText || article.metaDescription || '',
     practiceArea: selected.area.title,
-    category
+    category,
+    content: article.content
   });
 
   if (cover.error) {
@@ -433,7 +434,8 @@ export async function regeneratePostCover(postId: string) {
     title: post.title,
     previewText: post.previewText || post.metaDescription || '',
     practiceArea,
-    category: post.category
+    category: post.category,
+    content: post.content
   });
 
   if (!cover.url) {

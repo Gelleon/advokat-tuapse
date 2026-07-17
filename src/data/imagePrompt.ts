@@ -1,19 +1,20 @@
 export const IMAGE_PROMPT_SETTING_KEY = 'ai_blog_image_prompt_template';
 
-export const DEFAULT_IMAGE_PROMPT = `Editorial cover illustration for a Russian legal news blog of a private law firm «Адвокаты Туапсе».
+export const DEFAULT_IMAGE_PROMPT = `TEXTLESS photoreal editorial cover. No letters, words, numbers, captions, watermarks, logos, stamps, UI, Cyrillic or Latin characters anywhere. Papers and screens must be blank or fully blurred.
 
-Article topic: {title}
-Practice area: {practiceArea}
-Category: {category}
-Short summary: {previewText}
+MANDATORY SCENE (depict exactly this, nothing else):
+{sceneBrief}
 
-Visual style:
-- Premium editorial news photography / cinematic still-life mood
-- Calm, trustworthy, professional atmosphere
-- Soft natural light, muted slate charcoal and warm ivory tones, subtle bronze/gold accents
-- Clean composition suitable for a website article cover (wide landscape 16:9)
-- Metaphorical legal symbolism related to the topic (documents, courthouse architecture silhouette, family home, land plot map, scales subtle in background, coastal Black Sea horizon near Tuapse if fits naturally)
-- No text, no watermarks, no logos, no brand names
-- No blood, violence, handcuffs close-up, mugshots, or shocking imagery
-- No readable documents with real text
-- Photorealistic or high-end digital editorial illustration, sharp, modern, dignified`;
+Context only (do not render as text in the image):
+- Practice area: {practiceArea}
+- Article gist: {articleExcerpt}
+
+Rules:
+- One quiet real-world scene with concrete objects from the mandatory scene
+- Square 1:1, soft natural light, muted slate and warm ivory, shallow depth of field
+- Calm professional mood for a Russian private law firm blog
+- Prefer industry/location props from the scene over abstract “law” symbols
+- Forbidden as main subject: law books, library shelves, scales of justice, gavel, courthouse collage, blood, violence, handcuffs, mugshots
+- No readable writing of any kind
+
+Again: textless image, blank documents only, follow the mandatory scene.`;

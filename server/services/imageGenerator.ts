@@ -4,12 +4,14 @@ import { PrismaClient } from '@prisma/client';
 import {
   DEFAULT_IMAGE_PROMPT,
   IMAGE_PROMPT_SETTING_KEY,
+  buildArticleExcerpt,
   renderImagePrompt
 } from '../data/imagePrompt';
 
 const prisma = new PrismaClient();
 
 const IMAGE_MODEL = 'recraft/recraft-v4.1-utility';
+const CHAT_MODEL = 'openai/gpt-4o-mini';
 const UPLOAD_DIR = path.join(__dirname, '../../uploads/blog');
 
 function getApiKey(): string {
@@ -31,7 +33,7 @@ function ensureUploadDir() {
 
 function decodeImagePayload(payload: string): Buffer {
   const cleaned = payload.includes('base64,')
-    ? payload.split('base64,')[1]
+    ? payload.split('base64,')[1] || ''
     : payload;
   return Buffer.from(cleaned, 'base64');
 }
@@ -44,6 +46,103 @@ function extensionFromMediaType(mediaType?: string): string {
   return 'png';
 }
 
+function fallbackSceneBrief(excerpt: string, practiceArea: string): string {
+  const lower = `${excerpt} ${practiceArea}`.toLowerCase();
+  if (/дорог|асфальт|трасс|шоссе|дорожн/.test(lower)) {
+    return 'Road construction site at dusk: freshly paved asphalt, orange traffic cones, road roller in soft focus, blank rolled plans and a folder on a site desk — no books, no text.';
+  }
+  if (/земельн|кадастр|участк|межев/.test(lower)) {
+    return 'Survey stakes along a green land plot boundary, blank cadastral sheet on a wooden table, soft daylight — no books, no text.';
+  }
+  if (/наслед|завещан/.test(lower)) {
+    return 'Quiet study with house keys and a sealed blank envelope on a wooden desk by a window — no books as hero object, no text.';
+  }
+  if (/алимент|развод|брак|семей/.test(lower)) {
+    return 'Calm modern apartment interior, two coffee cups and blank folders on a table — respectful family-law mood, no books, no text.';
+  }
+  if (/банкрот|долг|несостоятель/.test(lower)) {
+    return 'Modest kitchen table with blank bills, keys and a calculator in muted light — sober bankruptcy mood, no books, no text.';
+  }
+  if (/уголов|следств|обвинен/.test(lower)) {
+    return 'Quiet defense attorney consultation room with blank case folder on the desk at dusk — no handcuffs, no books library, no text.';
+  }
+  if (/контракт|договор|подряд|строитель|госзакуп|арбитраж/.test(lower)) {
+    return 'Construction or business contract setting: hard hat, blank contract folder, site or office desk with rolled blank drawings — industry props, not a law library.';
+  }
+  return 'Professional consulting desk with blank folders and soft window light, concrete props matching the article industry — not a law library, no scales, no text.';
+}
+
+async function buildSceneBrief(input: {
+  apiKey: string;
+  title: string;
+  previewText: string;
+  practiceArea: string;
+  articleExcerpt: string;
+}): Promise<string> {
+  const excerpt = input.articleExcerpt || input.previewText || input.title;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 45000);
+
+  try {
+    const response = await fetch('https://routerai.ru/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${input.apiKey}`
+      },
+      body: JSON.stringify({
+        model: CHAT_MODEL,
+        temperature: 0.3,
+        messages: [
+          {
+            role: 'system',
+            content:
+              'You write short English visual briefs for photoreal article covers. Output 1-2 sentences only. No quotes, no markdown, no title text.'
+          },
+          {
+            role: 'user',
+            content: `Write a concrete visual scene for a cover photo that matches THIS article topic.
+
+Article title: ${input.title}
+Practice area: ${input.practiceArea}
+Article text gist: ${excerpt}
+
+Requirements:
+- Show the real subject of the article with industry/location props (e.g. road construction contracts → asphalt roadworks, cones, road roller, blank site plans — NOT a law book)
+- If the article is about contracts/procurement/construction/roads/land/family/bankruptcy/inheritance/crime — reflect that specific domain
+- Never use law books, library shelves, scales of justice, or gavel as the main subject
+- No people faces; objects and environments only
+- Mention that documents/plans are blank/unreadable
+- Do not include any words that should appear in the image`
+          }
+        ]
+      }),
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      console.error('Scene brief API error:', response.status, (await response.text()).slice(0, 300));
+      return fallbackSceneBrief(excerpt, input.practiceArea);
+    }
+
+    const data = await response.json();
+    const brief = String(data.choices?.[0]?.message?.content || '')
+      .replace(/^["'\s]+|["'\s]+$/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (brief.length < 20) {
+      return fallbackSceneBrief(excerpt, input.practiceArea);
+    }
+    return brief.slice(0, 500);
+  } catch (error) {
+    console.error('Scene brief failed:', error);
+    return fallbackSceneBrief(excerpt, input.practiceArea);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 export type CoverImageResult = {
   url: string | null;
   error?: string;
@@ -54,20 +153,48 @@ export async function generateBlogCoverImage(vars: {
   previewText: string;
   practiceArea: string;
   category: string;
+  content?: string;
 }): Promise<CoverImageResult> {
   const apiKey = getApiKey();
   if (!apiKey) {
     return { url: null, error: 'ROUTERAI_API_KEY не настроен на сервере' };
   }
 
+  const articleExcerpt = buildArticleExcerpt({
+    title: vars.title,
+    previewText: vars.previewText,
+    ...(vars.content ? { content: vars.content } : {})
+  });
+
+  const sceneBrief = await buildSceneBrief({
+    apiKey,
+    title: vars.title,
+    previewText: vars.previewText,
+    practiceArea: vars.practiceArea,
+    articleExcerpt
+  });
+
+  console.log('Cover scene brief:', sceneBrief);
+
   const template = await getImagePromptTemplate();
-  const prompt = renderImagePrompt(template, vars);
+  let prompt = renderImagePrompt(template, {
+    title: vars.title,
+    previewText: vars.previewText,
+    practiceArea: vars.practiceArea,
+    category: vars.category,
+    sceneBrief,
+    articleExcerpt
+  });
+
+  // Старые шаблоны без {sceneBrief} всё равно получают сцену в начале
+  if (!template.includes('{sceneBrief}')) {
+    prompt = `MANDATORY SCENE (depict exactly this): ${sceneBrief}\n\nTEXTLESS image, no letters or numbers.\n\n${prompt}`;
+  }
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 120000);
 
   try {
-    // 1024x1024 — стабильный размер для Recraft через RouterAI
     const response = await fetch('https://routerai.ru/api/v1/images/generations', {
       method: 'POST',
       headers: {

@@ -438,9 +438,12 @@ const BlogAdmin = () => {
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-slate-700">Обложка (Recraft / RouterAI)</p>
                     <p className="text-xs text-slate-500">
-                      Плейсхолдеры: <code className="bg-slate-100 px-1 rounded">{'{title}'}</code>,{' '}
-                      <code className="bg-slate-100 px-1 rounded">{'{previewText}'}</code>,{' '}
+                      Сначала ИИ строит сцену по тексту статьи. Плейсхолдеры:{' '}
+                      <code className="bg-slate-100 px-1 rounded">{'{sceneBrief}'}</code>,{' '}
+                      <code className="bg-slate-100 px-1 rounded">{'{articleExcerpt}'}</code>,{' '}
                       <code className="bg-slate-100 px-1 rounded">{'{practiceArea}'}</code>,{' '}
+                      <code className="bg-slate-100 px-1 rounded">{'{previewText}'}</code>,{' '}
+                      <code className="bg-slate-100 px-1 rounded">{'{title}'}</code>,{' '}
                       <code className="bg-slate-100 px-1 rounded">{'{category}'}</code>
                     </p>
                     <textarea

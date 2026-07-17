@@ -166,11 +166,11 @@ const SettingsAdmin = () => {
             <Info className="w-5 h-5 flex-shrink-0 text-blue-500" />
             <div className="space-y-2">
               <p>
-                Используется моделью Recraft через RouterAI при создании черновика.
-                Лучше писать промпт на английском — модели изображений так стабильнее.
+                Перед картинкой ИИ читает текст статьи и задаёт конкретную сцену ({`{sceneBrief}`}).
+                Промпт лучше на английском. Книги/весы как главный объект запрещены в стандартном шаблоне.
               </p>
               <p className="font-mono text-xs">
-                {`{title}`} · {`{previewText}`} · {`{practiceArea}`} · {`{category}`}
+                {`{sceneBrief}`} · {`{articleExcerpt}`} · {`{practiceArea}`} · {`{previewText}`} · {`{title}`} · {`{category}`}
               </p>
             </div>
           </div>
