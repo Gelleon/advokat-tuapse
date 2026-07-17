@@ -561,11 +561,11 @@ const BlogAdmin = () => {
           <div className="space-y-3">
             <label className="block text-sm font-medium text-slate-700">Обложка статьи</label>
             {coverPreviewSrc ? (
-              <div className="rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
+              <div className="rounded-xl border border-slate-200 bg-slate-100 p-2 flex items-center justify-center">
                 <img
                   src={coverPreviewSrc}
                   alt="Превью обложки"
-                  className="w-full max-h-64 object-cover"
+                  className="w-full max-w-md max-h-96 h-auto object-contain"
                 />
               </div>
             ) : (
