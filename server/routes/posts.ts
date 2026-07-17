@@ -111,6 +111,11 @@ router.post('/', authenticateToken, upload.single('thumbnail'), async (req, res)
       return res.status(400).json({ error: 'Slug должен быть уникальным' });
     }
 
+    const resolvedStatus = status || 'DRAFT';
+    const resolvedPublishedAt = publishedAt
+      ? new Date(publishedAt)
+      : (resolvedStatus === 'PUBLISHED' ? new Date() : null);
+
     const newPost = await prisma.post.create({
       data: {
         title,
@@ -120,8 +125,8 @@ router.post('/', authenticateToken, upload.single('thumbnail'), async (req, res)
         category,
         tags: typeof tags === 'string' ? tags : JSON.stringify(tags || []),
         author,
-        status: status || 'DRAFT',
-        publishedAt: publishedAt ? new Date(publishedAt) : null,
+        status: resolvedStatus,
+        publishedAt: resolvedPublishedAt,
         metaTitle,
         metaDescription,
         thumbnailUrl: req.file ? `/uploads/blog/${req.file.filename}` : null
@@ -147,6 +152,11 @@ router.put('/:id', authenticateToken, upload.single('thumbnail'), async (req, re
     const { id } = req.params;
     const { title, slug, previewText, content, category, tags, author, status, publishedAt, metaTitle, metaDescription } = req.body;
 
+    const resolvedStatus = status || 'DRAFT';
+    const resolvedPublishedAt = publishedAt
+      ? new Date(publishedAt)
+      : (resolvedStatus === 'PUBLISHED' ? new Date() : null);
+
     const dataToUpdate: any = {
       title,
       slug,
@@ -155,8 +165,8 @@ router.put('/:id', authenticateToken, upload.single('thumbnail'), async (req, re
       category,
       tags: typeof tags === 'string' ? tags : JSON.stringify(tags || []),
       author,
-      status,
-      publishedAt: publishedAt ? new Date(publishedAt) : null,
+      status: resolvedStatus,
+      publishedAt: resolvedPublishedAt,
       metaTitle,
       metaDescription,
     };

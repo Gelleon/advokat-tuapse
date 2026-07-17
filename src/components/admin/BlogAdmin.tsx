@@ -1,14 +1,21 @@
 import React, { useState, useRef } from 'react';
 import { usePosts, Post } from '../../store/usePosts';
-import { Plus, Trash2, Edit2, X, Image as ImageIcon, Calendar, Sparkles, Loader2 } from 'lucide-react';
+import { Trash2, Edit2, X, Image as ImageIcon, Calendar, Sparkles, Loader2, Send } from 'lucide-react';
 import { API_URL } from '../../config';
 import { PRACTICE_AREA_OPTIONS } from '../../data/practiceAreas';
+
+const nowLocalInput = () => {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
+};
 
 const BlogAdmin = () => {
   const { posts, addPost, updatePost, deletePost, refreshPosts } = usePosts(true); // pass isAdmin=true
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const initialFormState: Partial<Post> = {
     title: '',
@@ -19,7 +26,7 @@ const BlogAdmin = () => {
     tags: [],
     author: '',
     status: 'DRAFT',
-    publishedAt: new Date().toISOString().slice(0, 16),
+    publishedAt: nowLocalInput(),
     metaTitle: '',
     metaDescription: ''
   };
@@ -35,7 +42,14 @@ const BlogAdmin = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => {
+      const next = { ...prev, [name]: value };
+      // При выборе «Опубликовано» автоматически ставим текущую дату, если её нет
+      if (name === 'status' && value === 'PUBLISHED' && !prev.publishedAt) {
+        next.publishedAt = nowLocalInput();
+      }
+      return next;
+    });
   };
 
   const handleAddTag = () => {
@@ -130,7 +144,7 @@ const BlogAdmin = () => {
         tags: post.tags || [],
         author: post.author || 'Адвокаты Туапсе',
         status: 'DRAFT',
-        publishedAt: '',
+        publishedAt: nowLocalInput(),
         metaTitle: post.metaTitle || '',
         metaDescription: post.metaDescription || ''
       });
@@ -139,7 +153,7 @@ const BlogAdmin = () => {
 
       await refreshPosts();
       setAgentMessage({
-        text: `Черновик создан по документу: ${data.source?.complexName || data.source?.eoNumber}. Проверьте текст и опубликуйте вручную.`,
+        text: `Черновик создан по документу: ${data.source?.complexName || data.source?.eoNumber}. Проверьте текст и нажмите «Опубликовать на сайте».`,
         type: 'success'
       });
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -154,14 +168,7 @@ const BlogAdmin = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.title || !formData.slug || !formData.content) {
-      alert('Заполните обязательные поля (Заголовок, Slug, Текст)');
-      return;
-    }
-
+  const buildFormPayload = (status: 'DRAFT' | 'PUBLISHED') => {
     const form = new FormData();
     form.append('title', formData.title || '');
     form.append('slug', formData.slug || '');
@@ -170,10 +177,14 @@ const BlogAdmin = () => {
     form.append('category', formData.category || 'Отраслевые новости');
     form.append('tags', JSON.stringify(formData.tags || []));
     form.append('author', formData.author || '');
-    form.append('status', formData.status || 'DRAFT');
-    
-    if (formData.publishedAt) {
-      form.append('publishedAt', new Date(formData.publishedAt).toISOString());
+    form.append('status', status);
+
+    const publishedAtValue = status === 'PUBLISHED'
+      ? (formData.publishedAt || nowLocalInput())
+      : formData.publishedAt;
+
+    if (publishedAtValue) {
+      form.append('publishedAt', new Date(publishedAtValue).toISOString());
     }
 
     form.append('metaTitle', formData.metaTitle || '');
@@ -183,13 +194,36 @@ const BlogAdmin = () => {
       form.append('thumbnail', fileInputRef.current.files[0]);
     }
 
-    if (editingId) {
-      await updatePost(editingId, form);
-    } else {
-      await addPost(form);
+    return form;
+  };
+
+  const savePost = async (status: 'DRAFT' | 'PUBLISHED') => {
+    if (!formData.title || !formData.slug || !formData.content) {
+      alert('Заполните обязательные поля (Заголовок, Slug, Текст)');
+      return;
     }
-    
-    handleCancelEdit();
+
+    setIsSaving(true);
+    try {
+      const form = buildFormPayload(status);
+      if (editingId) {
+        await updatePost(editingId, form);
+      } else {
+        await addPost(form);
+      }
+      await refreshPosts();
+      handleCancelEdit();
+      if (status === 'PUBLISHED') {
+        setAgentMessage({ text: 'Статья опубликована и доступна в разделе Блог на сайте.', type: 'success' });
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await savePost((formData.status as 'DRAFT' | 'PUBLISHED') || 'DRAFT');
   };
 
   return (
@@ -362,6 +396,9 @@ const BlogAdmin = () => {
                 <option value="DRAFT">Черновик</option>
                 <option value="PUBLISHED">Опубликовано</option>
               </select>
+              <p className="text-xs text-slate-500 mt-1">
+                Или просто нажмите кнопку «Опубликовать на сайте» ниже.
+              </p>
             </div>
           </div>
 
@@ -372,7 +409,7 @@ const BlogAdmin = () => {
                 <input 
                   type="datetime-local" 
                   name="publishedAt" 
-                  value={formData.publishedAt} 
+                  value={formData.publishedAt || ''} 
                   onChange={handleInputChange} 
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none" 
                 />
@@ -393,10 +430,24 @@ const BlogAdmin = () => {
             </div>
           </div>
 
-          <div className="pt-4 border-t border-slate-100">
-            <button type="submit" className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors">
-              {editingId ? <Edit2 className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
-              {editingId ? 'Сохранить изменения' : 'Сохранить публикацию'}
+          <div className="pt-4 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-3">
+            <button
+              type="button"
+              disabled={isSaving}
+              onClick={() => savePost('DRAFT')}
+              className="w-full flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-800 px-6 py-3 rounded-lg font-semibold transition-colors disabled:opacity-60"
+            >
+              {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Edit2 className="w-5 h-5" />}
+              Сохранить черновик
+            </button>
+            <button
+              type="button"
+              disabled={isSaving}
+              onClick={() => savePost('PUBLISHED')}
+              className="w-full flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors disabled:opacity-60"
+            >
+              {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+              Опубликовать на сайте
             </button>
           </div>
         </form>
