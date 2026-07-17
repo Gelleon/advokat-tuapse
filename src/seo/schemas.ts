@@ -93,7 +93,7 @@ export function articleSchema(post: {
     '@context': 'https://schema.org',
     '@type': 'NewsArticle',
     headline: post.title,
-    description: post.metaDescription || post.previewText,
+    description: post.previewText || post.metaDescription,
     image,
     datePublished: published,
     dateModified: post.updatedAt || published,

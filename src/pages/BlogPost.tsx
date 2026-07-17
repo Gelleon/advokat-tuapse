@@ -8,12 +8,16 @@ import { ArrowLeft } from 'lucide-react';
 import { Post } from '../store/usePosts';
 import { API_URL, BASE_URL, absoluteUrl, SITE_NAME } from '../config';
 import VcPostCard from '../components/blog/VcPostCard';
-import {
-  formatBlogDate,
-  getAuthorInitials,
-  getTopicLabel,
-  getVisibleTags,
-} from '../components/blog/blogHelpers';
+import { getTopicLabel, getVisibleTags } from '../components/blog/blogHelpers';
+
+const formatFullDate = (value?: string) => {
+  if (!value) return '';
+  return new Date(value).toLocaleDateString('ru-RU', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+};
 
 const BlogPost = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -72,7 +76,7 @@ const BlogPost = () => {
 
   if (loading) {
     return (
-      <div className="vc-page min-h-screen flex items-center justify-center text-[#8a8a8a]">
+      <div className="min-h-screen bg-surface flex items-center justify-center text-primary/50 font-light">
         Загрузка...
       </div>
     );
@@ -80,23 +84,23 @@ const BlogPost = () => {
 
   if (!post) {
     return (
-      <div className="vc-page min-h-screen flex items-center justify-center text-[#8a8a8a] text-lg">
+      <div className="min-h-screen bg-surface flex items-center justify-center text-primary/50 text-xl font-light">
         Публикация не найдена
       </div>
     );
   }
 
   const publishedDate = post.publishedAt || post.createdAt;
-  const publishedLabel = formatBlogDate(publishedDate);
+  const publishedLabel = formatFullDate(publishedDate);
   const author = post.author || SITE_NAME;
-  const initials = getAuthorInitials(author);
   const topic = getTopicLabel(post);
+  const seoDescription = post.metaDescription || post.previewText;
 
   return (
-    <div className="vc-page min-h-screen font-sans">
+    <div className="min-h-screen bg-surface font-sans">
       <Seo
         title={post.metaTitle || `${post.title} | ${SITE_NAME}`}
-        description={post.metaDescription || post.previewText}
+        description={seoDescription}
         path={`/blog/${post.slug}`}
         image={post.thumbnailUrl ? absoluteUrl(post.thumbnailUrl) : undefined}
         type="article"
@@ -117,60 +121,69 @@ const BlogPost = () => {
       />
       <Header solid />
 
-      <main className="pt-24 pb-16">
-        <div className="vc-container">
-          <Link to="/blog" className="vc-back">
-            <ArrowLeft className="w-4 h-4" strokeWidth={2} />
-            Лента блога
+      <main className="pt-28 pb-20">
+        <div className="max-w-3xl mx-auto px-6">
+          <Link
+            to="/blog"
+            className="inline-flex items-center gap-2 text-primary/45 hover:text-secondary font-medium tracking-wider uppercase text-xs transition-colors mb-10"
+          >
+            <ArrowLeft className="w-4 h-4" strokeWidth={1.5} />
+            Вернуться в блог
           </Link>
 
-          <article className="vc-article" itemScope itemType="https://schema.org/Article">
-            <header className="vc-article__header">
-              <div className="vc-article__meta">
-                <span className="vc-avatar vc-avatar--lg" aria-hidden="true">{initials}</span>
-                <div className="vc-article__meta-text">
-                  <div className="vc-article__author" itemProp="author" itemScope itemType="https://schema.org/Organization">
-                    <span itemProp="name">{author}</span>
-                  </div>
-                  <div className="vc-article__submeta">
-                    <span className="vc-chip">{topic}</span>
-                    <span className="vc-dot" aria-hidden="true" />
-                    <time dateTime={publishedDate} itemProp="datePublished">
-                      {publishedLabel}
-                    </time>
-                  </div>
-                </div>
+          <article itemScope itemType="https://schema.org/NewsArticle">
+            <header className="mb-10">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium tracking-widest uppercase text-primary/40 mb-6">
+                <span className="text-secondary">{topic}</span>
+                <time dateTime={publishedDate} itemProp="datePublished">
+                  {publishedLabel}
+                </time>
+                <span itemProp="author" itemScope itemType="https://schema.org/Organization">
+                  <span itemProp="name">{author}</span>
+                </span>
               </div>
 
-              <h1 className="vc-article__title" itemProp="headline">
+              <h1
+                className="text-3xl md:text-[2.75rem] font-bold text-primary font-serif leading-[1.2] tracking-tight mb-6"
+                itemProp="headline"
+              >
                 {post.title}
               </h1>
 
               {post.previewText && (
-                <p className="vc-article__subtitle">{post.previewText}</p>
+                <p
+                  className="news-dek"
+                  itemProp="description"
+                >
+                  {post.previewText}
+                </p>
               )}
             </header>
 
             {post.thumbnailUrl && (
-              <figure className="vc-article__cover">
+              <figure className="mb-12 overflow-hidden rounded-sm">
                 <img
                   src={`${BASE_URL}${post.thumbnailUrl}`}
                   alt={post.title}
+                  className="w-full max-h-[420px] object-cover"
                   itemProp="image"
                 />
               </figure>
             )}
 
             <div
-              className="article-body"
+              className="article-body mb-12"
               itemProp="articleBody"
               dangerouslySetInnerHTML={{ __html: post.content }}
             />
 
             {visibleTags.length > 0 && (
-              <div className="vc-tags" aria-label="Теги статьи">
+              <div className="flex flex-wrap gap-2 pt-2" aria-label="Теги статьи">
                 {visibleTags.map((tag) => (
-                  <span key={tag} className="vc-tag">
+                  <span
+                    key={tag}
+                    className="text-[11px] text-primary/55 font-medium tracking-wide uppercase border border-primary/10 px-3 py-1.5"
+                  >
                     {tag}
                   </span>
                 ))}
@@ -179,14 +192,14 @@ const BlogPost = () => {
           </article>
 
           {relatedPosts.length > 0 && (
-            <section className="vc-related">
-              <div className="vc-related__head">
-                <h2>Читайте также</h2>
+            <section className="mt-20 pt-12 border-t border-surface-dark">
+              <div className="vc-related__head mb-4">
+                <h2 className="!font-serif !text-2xl md:!text-3xl !font-bold text-primary">Читайте также</h2>
                 <Link to="/blog">Все материалы</Link>
               </div>
               <div className="vc-feed">
                 {relatedPosts.map((rp) => (
-                  <VcPostCard key={rp.id} post={rp} compact />
+                  <VcPostCard key={rp.id} post={rp} />
                 ))}
               </div>
             </section>

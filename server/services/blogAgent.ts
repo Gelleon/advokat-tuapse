@@ -241,6 +241,37 @@ async function callRouterAI(prompt: string): Promise<string> {
   }
 }
 
+function stripHtmlToText(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** Гарантирует развёрнутое превью для ленты и индексации. */
+function ensureExpandedPreview(previewText: string, content: string, title: string): string {
+  const preview = previewText.trim();
+  if (preview.length >= 320) {
+    return preview.length > 650 ? `${preview.slice(0, 647).replace(/\s+\S*$/, '')}…` : preview;
+  }
+
+  const body = stripHtmlToText(content);
+  const combined = [preview, body].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+  const source = combined || title;
+  if (source.length <= 650) return source;
+  return `${source.slice(0, 647).replace(/\s+\S*$/, '')}…`;
+}
+
+function ensureMetaDescription(metaDescription: string, previewText: string, title: string): string {
+  const meta = metaDescription.trim();
+  if (meta.length >= 110 && meta.length <= 170) return meta;
+  const base = (meta || previewText || title).replace(/\s+/g, ' ').trim();
+  if (base.length <= 160) return base;
+  return `${base.slice(0, 157).replace(/\s+\S*$/, '')}…`;
+}
+
 function parseArticleJson(raw: string): GeneratedArticle {
   const cleaned = raw.trim()
     .replace(/^```json\s*/i, '')
@@ -260,13 +291,22 @@ function parseArticleJson(raw: string): GeneratedArticle {
     throw new Error('В ответе ИИ отсутствуют обязательные поля title/content');
   }
 
+  const title = String(parsed.title).trim();
+  const content = String(parsed.content).trim();
+  const previewText = ensureExpandedPreview(String(parsed.previewText || ''), content, title);
+  const metaDescription = ensureMetaDescription(
+    String(parsed.metaDescription || ''),
+    previewText,
+    title
+  );
+
   return {
-    title: String(parsed.title).trim(),
-    slug: slugify(String(parsed.slug || parsed.title)),
-    previewText: String(parsed.previewText || '').trim(),
-    content: String(parsed.content).trim(),
-    metaTitle: String(parsed.metaTitle || parsed.title).trim(),
-    metaDescription: String(parsed.metaDescription || parsed.previewText || '').trim(),
+    title,
+    slug: slugify(String(parsed.slug || title)),
+    previewText,
+    content,
+    metaTitle: String(parsed.metaTitle || title).trim(),
+    metaDescription,
     tags: Array.isArray(parsed.tags) ? parsed.tags.map((t: unknown) => String(t).trim()).filter(Boolean) : []
   };
 }
