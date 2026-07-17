@@ -1,7 +1,7 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth';
-import { generateBlogDraft, listPracticeAreasForApi } from '../services/blogAgent';
+import { generateBlogDraft, listPracticeAreasForApi, regeneratePostCover } from '../services/blogAgent';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -98,6 +98,24 @@ router.post('/blog/generate', authenticateToken, async (req, res) => {
       return res.status(504).json({ error: 'Превышено время ожидания ответа от ИИ' });
     }
     res.status(500).json({ error: error?.message || 'Ошибка генерации статьи' });
+  }
+});
+
+router.post('/blog/regenerate-image', authenticateToken, async (req, res) => {
+  try {
+    const { postId } = req.body || {};
+    if (!postId) {
+      return res.status(400).json({ error: 'Не указан postId' });
+    }
+
+    const post = await regeneratePostCover(String(postId));
+    res.json({ post });
+  } catch (error: any) {
+    console.error('Cover regenerate error:', error);
+    if (error?.name === 'AbortError') {
+      return res.status(504).json({ error: 'Превышено время ожидания генерации изображения' });
+    }
+    res.status(500).json({ error: error?.message || 'Ошибка генерации обложки' });
   }
 });
 

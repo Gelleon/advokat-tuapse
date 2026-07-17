@@ -45,6 +45,7 @@ export interface BlogAgentResult {
     category: string;
     tags: string[];
     author: string;
+    thumbnailUrl?: string | null;
     status: string;
     publishedAt: string | null;
     metaTitle: string | null;
@@ -58,6 +59,7 @@ export interface BlogAgentResult {
     url: string;
     practiceArea: string;
   };
+  imageError?: string;
 }
 
 interface RankedDocument {
@@ -366,16 +368,15 @@ export async function generateBlogDraft(input: BlogAgentInput = {}): Promise<Blo
   const slug = await ensureUniqueSlug(article.slug || slugify(article.title));
   const category = 'Отраслевые новости';
 
-  let thumbnailUrl: string | null = null;
-  try {
-    thumbnailUrl = await generateBlogCoverImage({
-      title: article.title,
-      previewText: article.previewText || article.metaDescription || '',
-      practiceArea: selected.area.title,
-      category
-    });
-  } catch (error) {
-    console.error('Cover image generation skipped due to error:', error);
+  const cover = await generateBlogCoverImage({
+    title: article.title,
+    previewText: article.previewText || article.metaDescription || '',
+    practiceArea: selected.area.title,
+    category
+  });
+
+  if (cover.error) {
+    console.error('Cover image generation issue:', cover.error);
   }
 
   const created = await prisma.post.create({
@@ -391,7 +392,7 @@ export async function generateBlogDraft(input: BlogAgentInput = {}): Promise<Blo
       publishedAt: null,
       metaTitle: article.metaTitle,
       metaDescription: article.metaDescription,
-      thumbnailUrl
+      thumbnailUrl: cover.url
     }
   });
 
@@ -408,7 +409,48 @@ export async function generateBlogDraft(input: BlogAgentInput = {}): Promise<Blo
       complexName: details.complexName?.replace(/<br\s*\/?>/gi, ' ') || details.name,
       url: sourceUrl,
       practiceArea: selected.area.title
-    }
+    },
+    imageError: cover.error
+  };
+}
+
+export async function regeneratePostCover(postId: string) {
+  const post = await prisma.post.findUnique({ where: { id: postId } });
+  if (!post) {
+    throw new Error('Публикация не найдена');
+  }
+
+  let practiceArea = 'Право';
+  try {
+    const tags: string[] = JSON.parse(post.tags || '[]');
+    const known = PRACTICE_AREAS.find((area) => tags.includes(area.title));
+    if (known) practiceArea = known.title;
+  } catch {
+    // ignore
+  }
+
+  const cover = await generateBlogCoverImage({
+    title: post.title,
+    previewText: post.previewText || post.metaDescription || '',
+    practiceArea,
+    category: post.category
+  });
+
+  if (!cover.url) {
+    throw new Error(cover.error || 'Не удалось сгенерировать обложку');
+  }
+
+  const updated = await prisma.post.update({
+    where: { id: postId },
+    data: { thumbnailUrl: cover.url }
+  });
+
+  return {
+    ...updated,
+    tags: JSON.parse(updated.tags || '[]'),
+    publishedAt: updated.publishedAt ? updated.publishedAt.toISOString() : null,
+    createdAt: updated.createdAt.toISOString(),
+    updatedAt: updated.updatedAt.toISOString()
   };
 }
 

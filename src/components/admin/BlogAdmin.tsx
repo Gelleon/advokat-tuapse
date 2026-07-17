@@ -37,6 +37,8 @@ const BlogAdmin = () => {
   const [tagInput, setTagInput] = useState('');
   const [thumbnailName, setThumbnailName] = useState('');
   const [existingThumbnailUrl, setExistingThumbnailUrl] = useState('');
+  const [previewNonce, setPreviewNonce] = useState(0);
+  const [isRegeneratingImage, setIsRegeneratingImage] = useState(false);
 
   const [practiceAreaId, setPracticeAreaId] = useState('auto');
   const [periodType, setPeriodType] = useState<'weekly' | 'monthly'>('weekly');
@@ -214,13 +216,20 @@ const BlogAdmin = () => {
       setThumbnailName(post.thumbnailUrl ? 'AI-обложка сгенерирована' : '');
       if (fileInputRef.current) fileInputRef.current.value = '';
 
+      setPreviewNonce(Date.now());
       await refreshPosts();
-      setAgentMessage({
-        text: post.thumbnailUrl
-          ? `Черновик и обложка созданы по документу: ${data.source?.complexName || data.source?.eoNumber}. Проверьте и опубликуйте.`
-          : `Черновик создан, но обложку сгенерировать не удалось. Можно загрузить фото вручную. Источник: ${data.source?.complexName || data.source?.eoNumber}.`,
-        type: 'success'
-      });
+
+      if (post.thumbnailUrl) {
+        setAgentMessage({
+          text: `Черновик и обложка созданы по документу: ${data.source?.complexName || data.source?.eoNumber}. Проверьте и опубликуйте.`,
+          type: 'success'
+        });
+      } else {
+        setAgentMessage({
+          text: `Черновик создан без обложки. ${data.imageError || 'Можно нажать «Сгенерировать обложку» или загрузить фото вручную.'} Источник: ${data.source?.complexName || data.source?.eoNumber}.`,
+          type: 'error'
+        });
+      }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error: any) {
       console.error('Blog agent failed:', error);
@@ -232,6 +241,46 @@ const BlogAdmin = () => {
       setIsGenerating(false);
     }
   };
+
+  const handleRegenerateImage = async () => {
+    if (!editingId) {
+      alert('Сначала сохраните или сгенерируйте статью');
+      return;
+    }
+
+    setIsRegeneratingImage(true);
+    setAgentMessage(null);
+    try {
+      const response = await fetch(`${API_URL}/ai/blog/regenerate-image`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ postId: editingId }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Не удалось сгенерировать обложку');
+      }
+
+      const url = data.post?.thumbnailUrl || '';
+      setExistingThumbnailUrl(url);
+      setThumbnailName(url ? 'AI-обложка сгенерирована' : '');
+      setPreviewNonce(Date.now());
+      await refreshPosts();
+      setAgentMessage({ text: 'Обложка успешно сгенерирована.', type: 'success' });
+    } catch (error: any) {
+      setAgentMessage({
+        text: error?.message || 'Ошибка генерации обложки',
+        type: 'error'
+      });
+    } finally {
+      setIsRegeneratingImage(false);
+    }
+  };
+
+  const coverPreviewSrc = existingThumbnailUrl
+    ? `${BASE_URL}${existingThumbnailUrl}${existingThumbnailUrl.includes('?') ? '&' : '?'}v=${previewNonce}`
+    : '';
 
   const buildFormPayload = (status: 'DRAFT' | 'PUBLISHED') => {
     const form = new FormData();
@@ -509,35 +558,51 @@ const BlogAdmin = () => {
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Миниатюра (Изображение)</label>
-              <div className="flex items-center gap-2">
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  ref={fileInputRef}
-                  onChange={handleFileChange} 
-                  className="hidden" 
-                />
-                <button 
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-slate-300 border-dashed rounded-lg hover:bg-slate-50 text-slate-600 transition-colors"
-                >
-                  <ImageIcon className="w-4 h-4" />
-                  {thumbnailName ? 'Изменить фото' : 'Загрузить фото'}
-                </button>
-              </div>
-              {thumbnailName && <p className="text-xs text-green-600 mt-1 truncate">Выбран: {thumbnailName}</p>}
-              {existingThumbnailUrl && (
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-slate-700">Обложка статьи</label>
+            {coverPreviewSrc ? (
+              <div className="rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
                 <img
-                  src={`${BASE_URL}${existingThumbnailUrl}`}
-                  alt="Обложка"
-                  className="mt-2 w-full max-w-xs h-28 object-cover rounded-lg border border-slate-200"
+                  src={coverPreviewSrc}
+                  alt="Превью обложки"
+                  className="w-full max-h-64 object-cover"
                 />
-              )}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-10 text-center text-sm text-slate-500">
+                Обложки пока нет — сгенерируйте AI или загрузите файл
+              </div>
+            )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <input
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 border border-slate-300 rounded-lg hover:bg-slate-50 text-slate-700 transition-colors"
+              >
+                <ImageIcon className="w-4 h-4" />
+                {thumbnailName ? 'Заменить файлом' : 'Загрузить файл'}
+              </button>
+              <button
+                type="button"
+                onClick={handleRegenerateImage}
+                disabled={!editingId || isRegeneratingImage || isGenerating}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-400 text-white rounded-lg transition-colors"
+              >
+                {isRegeneratingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                {isRegeneratingImage ? 'Генерируем…' : 'Сгенерировать обложку'}
+              </button>
             </div>
+            {thumbnailName && <p className="text-xs text-green-600 truncate">{thumbnailName}</p>}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Статус</label>
               <select name="status" value={formData.status} onChange={handleInputChange} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none">
@@ -548,20 +613,15 @@ const BlogAdmin = () => {
                 Или просто нажмите кнопку «Опубликовать на сайте» ниже.
               </p>
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Дата публикации</label>
-              <div className="relative">
-                <input 
-                  type="datetime-local" 
-                  name="publishedAt" 
-                  value={formData.publishedAt || ''} 
-                  onChange={handleInputChange} 
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none" 
-                />
-              </div>
+              <input
+                type="datetime-local"
+                name="publishedAt"
+                value={formData.publishedAt || ''}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
+              />
             </div>
           </div>
 
@@ -607,31 +667,48 @@ const BlogAdmin = () => {
         <div className="space-y-4">
           {posts.map((p) => (
             <div key={p.id} className="p-4 rounded-xl border border-slate-100 hover:border-slate-200 bg-slate-50 hover:bg-white transition-colors group">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <div className="flex gap-2 mb-2">
-                    <span className="text-xs font-medium px-2 py-1 bg-white border border-slate-200 rounded-md text-slate-500">
-                      {p.category}
-                    </span>
-                    <span className={`text-xs font-medium px-2 py-1 rounded-md ${p.status === 'PUBLISHED' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                      {p.status === 'PUBLISHED' ? 'Опубликовано' : 'Черновик'}
-                    </span>
+              <div className="flex gap-3 items-start">
+                <div className="w-16 h-16 rounded-lg overflow-hidden bg-slate-200 flex-shrink-0 border border-slate-200">
+                  {p.thumbnailUrl ? (
+                    <img
+                      src={`${BASE_URL}${p.thumbnailUrl}`}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400 px-1 text-center leading-tight">
+                      нет фото
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex justify-between items-start mb-2 gap-2">
+                    <div className="min-w-0">
+                      <div className="flex gap-2 mb-2 flex-wrap">
+                        <span className="text-xs font-medium px-2 py-1 bg-white border border-slate-200 rounded-md text-slate-500">
+                          {p.category}
+                        </span>
+                        <span className={`text-xs font-medium px-2 py-1 rounded-md ${p.status === 'PUBLISHED' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                          {p.status === 'PUBLISHED' ? 'Опубликовано' : 'Черновик'}
+                        </span>
+                      </div>
+                      <h3 className="font-semibold text-slate-900 leading-tight">{p.title}</h3>
+                    </div>
+                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0">
+                      <button type="button" onClick={() => handleEdit(p)} className="text-slate-400 hover:text-amber-500">
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button type="button" onClick={() => deletePost(p.id)} className="text-slate-400 hover:text-red-500">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                  <h3 className="font-semibold text-slate-900 leading-tight">{p.title}</h3>
+                  <div className="text-sm text-slate-500 mb-2 line-clamp-1">{p.previewText}</div>
+                  <div className="text-xs text-slate-400 flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    {p.publishedAt ? new Date(p.publishedAt).toLocaleDateString('ru-RU') : 'Не запланировано'}
+                  </div>
                 </div>
-                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                  <button onClick={() => handleEdit(p)} className="text-slate-400 hover:text-amber-500">
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button onClick={() => deletePost(p.id)} className="text-slate-400 hover:text-red-500">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-              <div className="text-sm text-slate-500 mb-2 line-clamp-1">{p.previewText}</div>
-              <div className="text-xs text-slate-400 flex items-center gap-1">
-                <Calendar className="w-3 h-3" />
-                {p.publishedAt ? new Date(p.publishedAt).toLocaleDateString('ru-RU') : 'Не запланировано'}
               </div>
             </div>
           ))}
