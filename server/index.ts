@@ -52,52 +52,60 @@ app.use('/api/posts', postsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/ai', aiRoutes);
 
-// Dynamic Sitemap Endpoint
-app.get('/api/sitemap.xml', async (req, res) => {
+// Dynamic Sitemap
+async function generateSitemapXml(baseUrl: string): Promise<string> {
+  const posts = await prisma.post.findMany({
+    where: { status: 'PUBLISHED' },
+    select: { slug: true, updatedAt: true },
+  });
+
+  const normalizedBaseUrl = baseUrl.replace(/\/$/, '');
+
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+  xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+
+  const staticRoutes = [
+    { url: '/', priority: '1.0', changefreq: 'weekly' },
+    { url: '/blog', priority: '0.9', changefreq: 'daily' },
+    { url: '/privacy', priority: '0.3', changefreq: 'yearly' },
+    { url: '/terms', priority: '0.3', changefreq: 'yearly' },
+  ];
+
+  staticRoutes.forEach((route) => {
+    xml += `  <url>\n`;
+    xml += `    <loc>${normalizedBaseUrl}${route.url}</loc>\n`;
+    xml += `    <changefreq>${route.changefreq}</changefreq>\n`;
+    xml += `    <priority>${route.priority}</priority>\n`;
+    xml += `  </url>\n`;
+  });
+
+  posts.forEach((post) => {
+    xml += `  <url>\n`;
+    xml += `    <loc>${normalizedBaseUrl}/blog/${post.slug}</loc>\n`;
+    xml += `    <lastmod>${post.updatedAt.toISOString()}</lastmod>\n`;
+    xml += `    <changefreq>monthly</changefreq>\n`;
+    xml += `    <priority>0.8</priority>\n`;
+    xml += `  </url>\n`;
+  });
+
+  xml += `</urlset>`;
+  return xml;
+}
+
+const handleSitemap = async (_req: express.Request, res: express.Response) => {
   try {
-    const posts = await prisma.post.findMany({
-      where: { status: 'PUBLISHED' },
-      select: { slug: true, updatedAt: true }
-    });
-
-    const baseUrl = process.env.FRONTEND_URL || 'https://yourdomain.com';
-    
-    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-    xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
-    
-    // Static routes
-    const staticRoutes = [
-      { url: '/', priority: '1.0', changefreq: 'weekly' },
-      { url: '/blog', priority: '0.9', changefreq: 'daily' },
-    ];
-
-    staticRoutes.forEach(route => {
-      xml += `  <url>\n`;
-      xml += `    <loc>${baseUrl}${route.url}</loc>\n`;
-      xml += `    <changefreq>${route.changefreq}</changefreq>\n`;
-      xml += `    <priority>${route.priority}</priority>\n`;
-      xml += `  </url>\n`;
-    });
-
-    // Dynamic blog posts
-    posts.forEach(post => {
-      xml += `  <url>\n`;
-      xml += `    <loc>${baseUrl}/blog/${post.slug}</loc>\n`;
-      xml += `    <lastmod>${post.updatedAt.toISOString()}</lastmod>\n`;
-      xml += `    <changefreq>monthly</changefreq>\n`;
-      xml += `    <priority>0.8</priority>\n`;
-      xml += `  </url>\n`;
-    });
-
-    xml += `</urlset>`;
-
+    const baseUrl = process.env.FRONTEND_URL || 'https://advokat-tuapse.ru';
+    const xml = await generateSitemapXml(baseUrl);
     res.header('Content-Type', 'application/xml');
     res.send(xml);
   } catch (error) {
     console.error(error);
     res.status(500).end();
   }
-});
+};
+
+app.get('/sitemap.xml', handleSitemap);
+app.get('/api/sitemap.xml', handleSitemap);
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

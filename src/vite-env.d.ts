@@ -1,1 +1,12 @@
 /// <reference types="vite/client" />
+
+interface ImportMetaEnv {
+  readonly VITE_SITE_URL: string;
+  readonly VITE_API_BASE_URL: string;
+  readonly VITE_GOOGLE_SITE_VERIFICATION: string;
+  readonly VITE_YANDEX_VERIFICATION: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}

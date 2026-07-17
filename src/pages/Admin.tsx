@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Seo from '../components/Seo';
 import { ArrowLeft, LogOut, Briefcase, FileText, Settings } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import CasesAdmin from '../components/admin/CasesAdmin';
@@ -22,6 +23,7 @@ const Admin = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">
+      <Seo title="Панель управления | Адвокаты Туапсе" description="Административная панель" path="/admin" noindex />
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">

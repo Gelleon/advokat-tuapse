@@ -1,5 +1,5 @@
 import React from 'react';
-import { Helmet } from 'react-helmet-async';
+import Seo from '../components/Seo';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { Link } from 'react-router-dom';
@@ -8,10 +8,11 @@ import { ArrowLeft } from 'lucide-react';
 const Terms = () => {
   return (
     <div className="min-h-screen bg-surface font-sans">
-      <Helmet>
-        <title>Условия использования | Адвокаты Туапсе</title>
-        <meta name="description" content="Пользовательское соглашение и условия использования сайта" />
-      </Helmet>
+      <Seo
+        title="Условия использования | Адвокаты Туапсе"
+        description="Пользовательское соглашение и условия использования сайта advokat-tuapse.ru"
+        path="/terms"
+      />
       <Header solid />
       
       <main className="pt-32 pb-20">

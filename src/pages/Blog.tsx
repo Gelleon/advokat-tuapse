@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Helmet } from 'react-helmet-async';
+import Seo from '../components/Seo';
+import { breadcrumbSchema } from '../seo/schemas';
 import { usePosts } from '../store/usePosts';
 import { Link } from 'react-router-dom';
 import Header from '../components/Header';
@@ -35,11 +36,16 @@ const Blog = () => {
 
   return (
     <div className="min-h-screen bg-surface font-sans">
-      <Helmet>
-        <title>Блог адвокатов | Экспертные статьи и новости юриспруденции</title>
-        <meta name="description" content="Читайте полезные статьи, обзоры судебной практики и юридические советы от ведущих адвокатов Туапсе." />
-        <meta property="og:title" content="Блог адвокатов | Экспертные статьи и новости" />
-      </Helmet>
+      <Seo
+        title="Блог адвокатов | Экспертные статьи и новости юриспруденции"
+        description="Читайте полезные статьи, обзоры судебной практики и юридические советы от ведущих адвокатов Туапсе."
+        path="/blog"
+        keywords="юридический блог, судебная практика, правовые новости, адвокат туапсе"
+        jsonLd={breadcrumbSchema([
+          { name: 'Главная', path: '/' },
+          { name: 'Блог', path: '/blog' },
+        ])}
+      />
       <Header solid />
       
       <main className="pt-32 pb-20">

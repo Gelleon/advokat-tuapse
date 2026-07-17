@@ -1,5 +1,5 @@
 import React from 'react';
-import { Helmet } from 'react-helmet-async';
+import Seo from '../components/Seo';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { Link } from 'react-router-dom';
@@ -8,10 +8,11 @@ import { ArrowLeft } from 'lucide-react';
 const Privacy = () => {
   return (
     <div className="min-h-screen bg-surface font-sans">
-      <Helmet>
-        <title>Политика конфиденциальности | Адвокаты Туапсе</title>
-        <meta name="description" content="Политика конфиденциальности и обработки персональных данных" />
-      </Helmet>
+      <Seo
+        title="Политика конфиденциальности | Адвокаты Туапсе"
+        description="Политика конфиденциальности и обработки персональных данных на сайте advokat-tuapse.ru"
+        path="/privacy"
+      />
       <Header solid />
       
       <main className="pt-32 pb-20">

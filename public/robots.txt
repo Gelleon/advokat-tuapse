@@ -1,9 +1,14 @@
 User-agent: *
+Allow: /
 Disallow: /admin
 Disallow: /login
 Disallow: /api/
 
+User-agent: Googlebot
 Allow: /
-Allow: /blog
 
-Sitemap: https://advokat-tuapse.ru/api/sitemap.xml
+User-agent: Yandex
+Allow: /
+
+Host: advokat-tuapse.ru
+Sitemap: https://advokat-tuapse.ru/sitemap.xml

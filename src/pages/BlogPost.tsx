@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Helmet } from 'react-helmet-async';
+import Seo from '../components/Seo';
+import { articleSchema, breadcrumbSchema } from '../seo/schemas';
 import { useParams, Link } from 'react-router-dom';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { ArrowLeft, Share2, Facebook, Twitter, Linkedin } from 'lucide-react';
 import { Post } from '../store/usePosts';
-import { API_URL, BASE_URL } from '../config';
+import { API_URL, BASE_URL, absoluteUrl } from '../config';
 
 const BlogPost = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -46,14 +47,21 @@ const BlogPost = () => {
 
   return (
     <div className="min-h-screen bg-surface font-sans">
-      <Helmet>
-        <title>{post.metaTitle || `${post.title} | Адвокаты Туапсе`}</title>
-        <meta name="description" content={post.metaDescription || post.previewText} />
-        <meta property="og:title" content={post.metaTitle || post.title} />
-        <meta property="og:description" content={post.metaDescription || post.previewText} />
-        {post.thumbnailUrl && <meta property="og:image" content={`${BASE_URL}${post.thumbnailUrl}`} />}
-        <meta property="og:type" content="article" />
-      </Helmet>
+      <Seo
+        title={post.metaTitle || `${post.title} | Адвокаты Туапсе`}
+        description={post.metaDescription || post.previewText}
+        path={`/blog/${post.slug}`}
+        image={post.thumbnailUrl ? absoluteUrl(post.thumbnailUrl) : undefined}
+        type="article"
+        jsonLd={[
+          articleSchema(post),
+          breadcrumbSchema([
+            { name: 'Главная', path: '/' },
+            { name: 'Блог', path: '/blog' },
+            { name: post.title, path: `/blog/${post.slug}` },
+          ]),
+        ]}
+      />
       <Header solid />
       
       <main className="pt-32 pb-20">

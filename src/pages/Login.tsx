@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Seo from '../components/Seo';
 import { useNavigate } from 'react-router-dom';
 import { Lock, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -36,6 +37,7 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+      <Seo title="Вход | Адвокаты Туапсе" description="Вход в панель управления" path="/login" noindex />
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 border border-slate-200">
         <div className="flex flex-col items-center mb-8">
           <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-4">
