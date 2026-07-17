@@ -1,7 +1,7 @@
 @echo off
 REM ============================================================
-REM Запуск deploy.ps1 без пауз и без интерактивных запросов.
-REM Маркеры начала/конца — в deploy.last.log
+REM Запуск deploy.ps1 без интерактивных запросов между шагами.
+REM В конце — пауза, чтобы увидеть результат.
 REM ============================================================
 
 set "LOG_FILE=%~dp0deploy.last.log"
@@ -16,4 +16,6 @@ if %RC% NEQ 0 (
   echo Deploy completed successfully.
 )
 echo Log markers: %LOG_FILE%
+echo.
+pause
 exit /b %RC%
