@@ -43,8 +43,9 @@ export const BLOG_PROMPT_JSON_APPENDIX = `
   "content": "HTML текст статьи",
   "metaTitle": "SEO title до 60 символов",
   "metaDescription": "SEO description до 160 символов",
-  "tags": ["тег1", "тег2", "тег3"]
-}`;
+  "tags": ["Уголовные дела", "краткий тематический тег"]
+}
+Теги: 2–4 штуки, с заглавной буквы, по смыслу статьи. Первый тег — точное название направления практики ({practiceArea}). Не добавляй технические метки вроде pravo:… или номеров документов.`;
 
 export function renderBlogPrompt(
   template: string,
@@ -61,5 +62,7 @@ export function renderBlogPrompt(
     .split('{practiceFeatures}').join(vars.practiceFeatures)
     .split('{sourceBrief}').join(vars.sourceBrief);
 
-  return `${rendered}\n${BLOG_PROMPT_JSON_APPENDIX}`;
+  const appendix = BLOG_PROMPT_JSON_APPENDIX
+    .split('{practiceArea}').join(vars.practiceArea);
+  return `${rendered}\n${appendix}`;
 }

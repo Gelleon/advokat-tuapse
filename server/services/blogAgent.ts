@@ -15,6 +15,7 @@ import {
   getDocumentPublicUrl
 } from './pravoApi';
 import { slugify } from '../utils/slugify';
+import { sanitizeTags } from '../utils/tags';
 import { generateBlogCoverImage } from './imageGenerator';
 
 const prisma = new PrismaClient();
@@ -275,6 +276,15 @@ function ensureMetaDescription(metaDescription: string, previewText: string, tit
   return `${base.slice(0, 157).replace(/\s+\S*$/, '')}…`;
 }
 
+/** Теги публикации: без pravo:, с каноническим направлением, без дублей */
+function buildPostTags(practiceAreaTitle: string, aiTags: string[] = []): string[] {
+  return sanitizeTags([
+    practiceAreaTitle,
+    'Изменения законодательства',
+    ...aiTags
+  ]).slice(0, 8);
+}
+
 function parseArticleJson(raw: string): GeneratedArticle {
   const cleaned = raw.trim()
     .replace(/^```json\s*/i, '')
@@ -342,12 +352,7 @@ export async function generateBlogDraft(input: BlogAgentInput = {}): Promise<Blo
 
   const sourceUrl = getDocumentPublicUrl(details.eoNumber);
   const sourceTitle = details.complexName?.replace(/<br\s*\/?>/gi, ' ') || details.name || sourceUrl;
-  const tags = Array.from(new Set([
-    selected.area.title,
-    'Изменения законодательства',
-    `pravo:${details.eoNumber}`,
-    ...article.tags
-  ])).slice(0, 10);
+  const tags = buildPostTags(selected.area.title, article.tags);
 
   if (!article.content.includes(sourceUrl)) {
     article.content += `<p class="article-source">Официальная публикация: <a href="${sourceUrl}" target="_blank" rel="noopener noreferrer">${sourceTitle}</a></p>`;
@@ -423,8 +428,10 @@ export async function regeneratePostCover(postId: string) {
 
   let practiceArea = 'Право';
   try {
-    const tags: string[] = JSON.parse(post.tags || '[]');
-    const known = PRACTICE_AREAS.find((area) => tags.includes(area.title));
+    const tags = sanitizeTags(post.tags || '[]');
+    const known = PRACTICE_AREAS.find((area) =>
+      tags.some((tag) => tag.toLowerCase() === area.title.toLowerCase())
+    );
     if (known) practiceArea = known.title;
   } catch {
     // ignore
@@ -449,7 +456,7 @@ export async function regeneratePostCover(postId: string) {
 
   return {
     ...updated,
-    tags: JSON.parse(updated.tags || '[]'),
+    tags: sanitizeTags(updated.tags || '[]'),
     publishedAt: updated.publishedAt ? updated.publishedAt.toISOString() : null,
     createdAt: updated.createdAt.toISOString(),
     updatedAt: updated.updatedAt.toISOString()

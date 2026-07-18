@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Seo from '../components/Seo';
 import { breadcrumbSchema } from '../seo/schemas';
 import { usePosts } from '../store/usePosts';
@@ -6,7 +6,7 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { Search } from 'lucide-react';
 import VcPostCard from '../components/blog/VcPostCard';
-import { getVisibleTags } from '../components/blog/blogHelpers';
+import { getTopicFilterOptions, postMatchesTopic } from '../components/blog/blogHelpers';
 
 const Blog = () => {
   const { posts } = usePosts();
@@ -16,11 +16,13 @@ const Blog = () => {
 
   const categories = ['Все', 'Отраслевые новости', 'Наши дела'];
 
-  const allTags = useMemo(() => {
-    const tags = new Set<string>();
-    posts.forEach((post) => getVisibleTags(post.tags).forEach((tag) => tags.add(tag)));
-    return ['Все', ...Array.from(tags)];
-  }, [posts]);
+  const allTags = useMemo(() => getTopicFilterOptions(posts), [posts]);
+
+  useEffect(() => {
+    if (selectedTag !== 'Все' && !allTags.includes(selectedTag)) {
+      setSelectedTag('Все');
+    }
+  }, [allTags, selectedTag]);
 
   const filteredPosts = useMemo(() => {
     return posts.filter((post) => {
@@ -28,7 +30,7 @@ const Blog = () => {
         post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         post.previewText.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCategory = selectedCategory === 'Все' || post.category === selectedCategory;
-      const matchesTag = selectedTag === 'Все' || post.tags.includes(selectedTag);
+      const matchesTag = postMatchesTopic(post, selectedTag);
       return matchesSearch && matchesCategory && matchesTag;
     });
   }, [posts, searchTerm, selectedCategory, selectedTag]);

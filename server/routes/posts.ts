@@ -5,6 +5,7 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { createRequire } from 'module';
+import { sanitizeTags, tagsToJson } from '../utils/tags';
 
 const require = createRequire(__filename);
 const { writeSitemapFile } = require('../write-sitemap.cjs');
@@ -70,7 +71,7 @@ router.get('/', async (req, res) => {
 
     const formattedPosts = posts.map(p => ({
       ...p,
-      tags: JSON.parse(p.tags)
+      tags: sanitizeTags(p.tags)
     }));
 
     res.json(formattedPosts);
@@ -101,7 +102,7 @@ router.get('/:slug', async (req, res) => {
 
     res.json({
       ...post,
-      tags: JSON.parse(post.tags)
+      tags: sanitizeTags(post.tags)
     });
   } catch (error) {
     res.status(500).json({ error: 'Ошибка при получении публикации' });
@@ -131,7 +132,7 @@ router.post('/', authenticateToken, upload.single('thumbnail'), async (req, res)
         previewText,
         content,
         category,
-        tags: typeof tags === 'string' ? tags : JSON.stringify(tags || []),
+        tags: tagsToJson(tags),
         author,
         status: resolvedStatus,
         publishedAt: resolvedPublishedAt,
@@ -143,7 +144,7 @@ router.post('/', authenticateToken, upload.single('thumbnail'), async (req, res)
 
     res.status(201).json({
       ...newPost,
-      tags: JSON.parse(newPost.tags)
+      tags: sanitizeTags(newPost.tags)
     });
     if (newPost.status === 'PUBLISHED') {
       refreshSitemap();
@@ -171,7 +172,7 @@ router.put('/:id', authenticateToken, upload.single('thumbnail'), async (req, re
       previewText,
       content,
       category,
-      tags: typeof tags === 'string' ? tags : JSON.stringify(tags || []),
+      tags: tagsToJson(tags),
       author,
       status: resolvedStatus,
       publishedAt: resolvedPublishedAt,
@@ -190,7 +191,7 @@ router.put('/:id', authenticateToken, upload.single('thumbnail'), async (req, re
 
     res.json({
       ...updatedPost,
-      tags: JSON.parse(updatedPost.tags)
+      tags: sanitizeTags(updatedPost.tags)
     });
     refreshSitemap();
   } catch (error) {

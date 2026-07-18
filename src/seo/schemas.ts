@@ -87,7 +87,9 @@ export function articleSchema(post: {
     : `${SITE_URL}/og-image.jpg`;
 
   const articleBody = stripHtml(post.content).slice(0, 5000);
-  const keywords = (post.tags || []).filter((t) => !t.startsWith('pravo:')).join(', ');
+  const keywords = (post.tags || [])
+    .filter((t) => t && !/^pravo:/i.test(t))
+    .join(', ');
 
   return {
     '@context': 'https://schema.org',
