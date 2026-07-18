@@ -438,7 +438,7 @@ const BlogAdmin = () => {
                   <div className="space-y-2">
                     <p className="text-sm font-medium text-slate-700">Обложка (Recraft / RouterAI)</p>
                     <p className="text-xs text-slate-500">
-                      Формат vc.ru (тёмный фон + панель). Сцена по тексту статьи. Плейсхолдеры:{' '}
+                      Формат vc.ru — горизонталь 16:9 без боковых полей. Сцена по тексту статьи. Плейсхолдеры:{' '}
                       <code className="bg-slate-100 px-1 rounded">{'{sceneBrief}'}</code>,{' '}
                       <code className="bg-slate-100 px-1 rounded">{'{articleExcerpt}'}</code>,{' '}
                       <code className="bg-slate-100 px-1 rounded">{'{practiceArea}'}</code>,{' '}

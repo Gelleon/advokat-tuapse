@@ -12,6 +12,8 @@ const prisma = new PrismaClient();
 
 const IMAGE_MODEL = 'recraft/recraft-v4.1-utility';
 const CHAT_MODEL = 'openai/gpt-4o-mini';
+/** Landscape 16:9 — supported by Recraft V4.1 Utility */
+const IMAGE_SIZE = '1344x768';
 const UPLOAD_DIR = path.join(__dirname, '../../uploads/blog');
 
 function getApiKey(): string {
@@ -49,27 +51,27 @@ function extensionFromMediaType(mediaType?: string): string {
 function fallbackSceneBrief(excerpt: string, practiceArea: string): string {
   const lower = `${excerpt} ${practiceArea}`.toLowerCase();
   if (/дорог|асфальт|трасс|шоссе|дорожн/.test(lower)) {
-    return 'Inside the panel: road construction at dusk — asphalt, orange cones, road roller soft-focus, blank rolled plans on a site desk; no books, no text.';
+    return 'Wide landscape road construction at dusk: asphalt, orange cones, road roller soft-focus, blank rolled plans — full-bleed, no side bars, no text.';
   }
   if (/земельн|кадастр|участк|межев/.test(lower)) {
-    return 'Inside the panel: survey stakes on a green land plot, blank cadastral sheet on wood table, soft daylight; no books, no text.';
+    return 'Wide landscape land survey: stakes on a green plot, blank cadastral sheet on wood table — full-bleed, no side bars, no text.';
   }
   if (/наслед|завещан/.test(lower)) {
-    return 'Inside the panel: quiet study with house keys and a sealed blank envelope on a wooden desk; no book library hero, no text.';
+    return 'Wide landscape quiet study: house keys and sealed blank envelope on wooden desk — full-bleed, no book library hero, no text.';
   }
   if (/алимент|развод|брак|семей/.test(lower)) {
-    return 'Inside the panel: calm apartment table with two coffee cups and blank folders; respectful family-law mood, no text.';
+    return 'Wide landscape calm apartment table with two coffee cups and blank folders — full-bleed, no text.';
   }
   if (/банкрот|долг|несостоятель/.test(lower)) {
-    return 'Inside the panel: modest table with blank bills, keys and calculator in muted light; no books, no text.';
+    return 'Wide landscape modest table with blank bills, keys and calculator — full-bleed, no books, no text.';
   }
   if (/уголов|следств|обвинен/.test(lower)) {
-    return 'Inside the panel: quiet defense consultation desk with a blank case folder at dusk; no handcuffs, no text.';
+    return 'Wide landscape defense consultation desk with blank case folder at dusk — full-bleed, no handcuffs, no text.';
   }
   if (/контракт|договор|подряд|строитель|госзакуп|арбитраж/.test(lower)) {
-    return 'Inside the panel: construction-contract still life — hard hat, blank folder, rolled blank drawings on a site/office desk; no law library.';
+    return 'Wide landscape construction-contract still life: hard hat, blank folder, rolled blank drawings — full-bleed, no law library.';
   }
-  return 'Inside the panel: professional consulting desk with blank folders and industry props matching the article; no law books, no scales, no text.';
+  return 'Wide landscape professional consulting desk with blank folders and industry props — full-bleed, no law books, no side bars, no text.';
 }
 
 async function buildSceneBrief(input: {
@@ -97,11 +99,11 @@ async function buildSceneBrief(input: {
           {
             role: 'system',
             content:
-              'You write short English visual briefs for vc.ru-style cover panels. Output 1-2 sentences only describing the INNER panel scene. No quotes, no markdown, no title text.'
+              'You write short English visual briefs for landscape 16:9 article covers. Output 1-2 sentences only. No quotes, no markdown, no title text.'
           },
           {
             role: 'user',
-            content: `Describe ONLY the photoreal scene that will sit inside a floating rounded panel on a dark solid background (vc.ru cover format). Do not describe the outer background or frame.
+            content: `Describe a photoreal FULL-BLEED landscape scene for a horizontal 16:9 cover (like vc.ru). The scene must fill the entire frame — no side bars, no floating card.
 
 Article title: ${input.title}
 Practice area: ${input.practiceArea}
@@ -109,11 +111,11 @@ Article text gist: ${excerpt}
 
 Requirements:
 - Match the real article subject with industry props (e.g. road construction contracts → asphalt roadworks, cones, road roller, blank site plans — NOT a law book)
-- Start with "Inside the panel:"
+- Start with "Wide landscape"
 - Objects/environments only; no people faces
 - Documents/plans blank or unreadable
 - Never use law books, library shelves, scales of justice, or gavel as the main subject
-- Do not request browser chrome, URLs, or any readable UI text`
+- Do not request browser chrome, URLs, side margins, or any readable UI text`
           }
         ]
       }),
@@ -186,11 +188,11 @@ export async function generateBlogCoverImage(vars: {
     articleExcerpt
   });
 
-  // Старые шаблоны без {sceneBrief} всё равно получают формат vc.ru + сцену
+  // Старые шаблоны без {sceneBrief} всё равно получают landscape + сцену
   if (!template.includes('{sceneBrief}')) {
     prompt = [
-      'vc.ru-style cover: flat dark charcoal background, centered floating rounded panel with soft drop shadow and generous margins.',
-      `PANEL SCENE: ${sceneBrief}`,
+      'Full-bleed landscape 16:9 cover like vc.ru. No side bars, no centered square inset.',
+      `SCENE: ${sceneBrief}`,
       'TEXTLESS image — no letters, numbers, URLs, or UI labels.',
       prompt
     ].join('\n\n');
@@ -210,7 +212,7 @@ export async function generateBlogCoverImage(vars: {
         model: IMAGE_MODEL,
         prompt,
         n: 1,
-        size: '1024x1024',
+        size: IMAGE_SIZE,
         response_format: 'b64_json'
       }),
       signal: controller.signal

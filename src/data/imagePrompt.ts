@@ -1,15 +1,16 @@
 export const IMAGE_PROMPT_SETTING_KEY = 'ai_blog_image_prompt_template';
 
-export const DEFAULT_IMAGE_PROMPT = `Create a vc.ru-style article cover image (Russian media cover mockup format).
+export const DEFAULT_IMAGE_PROMPT = `Create a vc.ru-style HORIZONTAL article cover (landscape 16:9).
 
-COMPOSITION (mandatory, like a product screenshot cover):
-- Full-bleed flat solid dark charcoal background (#1c1c1e / near-black gray)
-- In the CENTER: one floating rounded rectangle panel (large soft drop shadow, ~16–24px corner radius)
-- Generous empty margin of background on ALL sides (at least 10–14% of the canvas) so the panel never touches the edges
-- The panel contains a photoreal scene matching the article topic
-- Square 1:1 canvas, clean editorial look, no clutter outside the panel
+COMPOSITION (mandatory):
+- Landscape canvas 16:9 — wide rectangle, NOT square
+- The photoreal scene FILLS the entire frame edge-to-edge
+- No side bars, no pillarboxing, no letterboxing, no empty vertical strips left/right
+- No floating small square card in the middle
+- Optional subtle vignette only — never solid empty side panels
+- Clean editorial cover like vc.ru news images
 
-PANEL CONTENT (mandatory scene):
+SCENE (fill the full frame):
 {sceneBrief}
 
 Context only — DO NOT render as text in the image:
@@ -17,17 +18,17 @@ Context only — DO NOT render as text in the image:
 - Gist: {articleExcerpt}
 
 STYLE:
-- Soft natural light inside the panel scene
-- Muted professional tones; calm, trustworthy mood
+- Soft natural light, muted professional tones
+- Calm, trustworthy mood for a Russian private law firm blog
 - High-end photoreal / editorial illustration
 - Prefer industry props from the scene over abstract law symbols
 
 HARD NEGATIVES:
-- No letters, words, numbers, captions, watermarks, logos, URLs, UI labels, Cyrillic or Latin characters anywhere
-- No browser address bar text, no fake website screenshots with readable UI copy
-- Papers/plans/screens inside the scene must be blank or fully blurred
+- No letters, words, numbers, captions, watermarks, logos, URLs, UI labels, Cyrillic or Latin characters
+- No browser chrome, no fake website screenshots with readable UI
+- Papers/plans/screens must be blank or fully blurred
 - Forbidden as main subject: law books, library shelves, scales of justice, gavel
 - No blood, violence, handcuffs, mugshots
-- Do not fill the whole canvas edge-to-edge with the scene — keep the floating-panel-on-solid-background format
+- No black/gray empty side margins; no centered square inset; image must be a full-bleed horizontal rectangle
 
-Again: textless vc.ru cover mockup — dark flat background + centered shadowed rounded panel with the scene inside.`;
+Again: full-bleed landscape 16:9 cover, textless, scene fills the whole image.`;

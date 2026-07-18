@@ -166,7 +166,7 @@ const SettingsAdmin = () => {
             <Info className="w-5 h-5 flex-shrink-0 text-blue-500" />
             <div className="space-y-2">
               <p>
-                Формат как на vc.ru: тёмный фон и сцена в скруглённой панели по центру.
+                Горизонтальная обложка 16:9 как на vc.ru, без боковых полей.
                 Перед картинкой ИИ читает текст статьи ({`{sceneBrief}`}). Промпт лучше на английском.
               </p>
               <p className="font-mono text-xs">
