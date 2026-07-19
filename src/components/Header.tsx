@@ -47,19 +47,19 @@ const Header = ({ solid = false }: HeaderProps) => {
       >
         <div className="container mx-auto px-6 max-w-7xl">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
+            <Link to="/" className="flex items-center space-x-3">
               <Scale 
                 className={`w-8 h-8 transition-colors duration-500 ${
                   isSolid ? 'text-primary' : 'text-white'
                 }`} 
                 strokeWidth={1.5}
               />
-              <h1 className={`text-2xl font-serif font-bold tracking-wide transition-colors duration-500 ${
+              <span className={`text-2xl font-serif font-bold tracking-wide transition-colors duration-500 ${
                 isSolid ? 'text-primary' : 'text-white'
               }`}>
                 Адвокаты Туапсе
-              </h1>
-            </div>
+              </span>
+            </Link>
 
             <nav className="hidden lg:flex items-center space-x-8">
               <Link 
