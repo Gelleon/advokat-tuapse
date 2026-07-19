@@ -1,5 +1,6 @@
 import React from 'react';
 import { Phone, Mail, MapPin, Clock, MessageCircle } from 'lucide-react';
+import { MAX_PROFILE_URL } from '../config';
 
 const Contact = () => {
   return (
@@ -81,15 +82,17 @@ const Contact = () => {
                   <span className="tracking-wider uppercase text-sm">Telegram</span>
                 </a>
 
-                <a
-                  href="https://web.max.ru/118666850"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full bg-white/5 hover:bg-white/10 text-white border border-white/10 py-4 px-6 rounded-sm font-medium transition-all duration-300 flex items-center justify-center space-x-3"
-                >
-                  <MessageCircle className="w-5 h-5 text-secondary" strokeWidth={1.5} />
-                  <span className="tracking-wider uppercase text-sm">MAX</span>
-                </a>
+                {MAX_PROFILE_URL && (
+                  <a
+                    href={MAX_PROFILE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full bg-white/5 hover:bg-white/10 text-white border border-white/10 py-4 px-6 rounded-sm font-medium transition-all duration-300 flex items-center justify-center space-x-3"
+                  >
+                    <MessageCircle className="w-5 h-5 text-secondary" strokeWidth={1.5} />
+                    <span className="tracking-wider uppercase text-sm">MAX</span>
+                  </a>
+                )}
               </div>
             </div>
           </div>

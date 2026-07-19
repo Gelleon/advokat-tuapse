@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowRight, MessageCircle, Phone, X } from 'lucide-react';
+import { MAX_PROFILE_URL } from '../config';
 
 const Hero = () => {
   const [showConsultationPopup, setShowConsultationPopup] = useState(false);
@@ -17,7 +18,9 @@ const Hero = () => {
   };
 
   const handleMaxClick = () => {
-    window.open('https://web.max.ru/118666850', '_blank');
+    if (MAX_PROFILE_URL) {
+      window.open(MAX_PROFILE_URL, '_blank', 'noopener,noreferrer');
+    }
     setShowConsultationPopup(false);
   };
 
@@ -63,13 +66,15 @@ const Hero = () => {
                 <span>Telegram</span>
               </button>
               
-              <button
-                onClick={handleMaxClick}
-                className="w-full flex items-center justify-center space-x-3 bg-surface hover:bg-surface-dark text-primary px-6 py-4 rounded-sm font-medium transition-colors border border-surface-dark"
-              >
-                <MessageCircle className="w-5 h-5" strokeWidth={1.5} />
-                <span>MAX</span>
-              </button>
+              {MAX_PROFILE_URL && (
+                <button
+                  onClick={handleMaxClick}
+                  className="w-full flex items-center justify-center space-x-3 bg-surface hover:bg-surface-dark text-primary px-6 py-4 rounded-sm font-medium transition-colors border border-surface-dark"
+                >
+                  <MessageCircle className="w-5 h-5" strokeWidth={1.5} />
+                  <span>MAX</span>
+                </button>
+              )}
               
               <button
                 onClick={handleCallClick}

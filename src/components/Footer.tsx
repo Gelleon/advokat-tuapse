@@ -1,6 +1,7 @@
 import React from 'react';
 import { Scale, Phone, Mail, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { MAX_PROFILE_URL } from '../config';
 
 const TelegramIcon = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -41,15 +42,17 @@ const Footer = () => {
               >
                 <TelegramIcon className="w-4 h-4" />
               </a>
-              <a 
-                href="https://web.max.ru/118666850" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                aria-label="MAX"
-                className="w-10 h-10 border border-white/20 hover:border-secondary hover:text-secondary rounded-sm flex items-center justify-center transition-colors text-white/80"
-              >
-                <MaxIcon className="w-5 h-5" />
-              </a>
+              {MAX_PROFILE_URL && (
+                <a 
+                  href={MAX_PROFILE_URL} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  aria-label="MAX"
+                  className="w-10 h-10 border border-white/20 hover:border-secondary hover:text-secondary rounded-sm flex items-center justify-center transition-colors text-white/80"
+                >
+                  <MaxIcon className="w-5 h-5" />
+                </a>
+              )}
             </div>
           </div>
 
