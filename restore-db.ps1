@@ -56,7 +56,7 @@ Run-Ssh "cd $SERVER_PATH/server/prisma && LATEST=`$(ls -t dev.db.bak.* 2>/dev/nu
 
 if (-not $SkipRestart) {
   Write-Host '=== Restart backend ===' -ForegroundColor Cyan
-  Run-Ssh "cd $SERVER_PATH/server && (pm2 restart advokat-server 2>/dev/null || pm2 start npm --name advokat-server -- start) && pm2 save"
+  Run-Ssh "cd $SERVER_PATH/server && (pm2 restart advokat-api 2>/dev/null || pm2 start bash --name advokat-api -- -c 'npx tsx index.ts') && pm2 save"
   Start-Sleep -Seconds 2
   Run-Ssh "curl -fsS http://127.0.0.1:5000/api/health || true"
   Run-Ssh "cd $SERVER_PATH/server && python3 - <<'PY'

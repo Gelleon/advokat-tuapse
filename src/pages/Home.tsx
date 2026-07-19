@@ -5,7 +5,6 @@ import Header from '../components/Header';
 import Hero from '../components/Hero';
 import Services from '../components/Services';
 import Portfolio from '../components/Portfolio';
-import LatestPosts from '../components/LatestPosts';
 import Contact from '../components/Contact';
 import Footer from '../components/Footer';
 
@@ -23,7 +22,6 @@ const Home = () => {
       <Hero />
       <Services />
       <Portfolio />
-      <LatestPosts />
       <Contact />
       <Footer />
     </div>
