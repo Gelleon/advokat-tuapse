@@ -86,7 +86,7 @@ const Hero = () => {
       <div className="relative z-10 w-full text-center px-4 sm:px-6 max-w-5xl mx-auto pt-20">
         <div className="mb-10 animate-fade-in-up md:max-w-[48rem] mx-auto">
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-serif font-bold text-white mb-6 leading-tight tracking-tight">
-            Профессиональная юридическая защита
+            Профессиональная юридическая защита{' '}
             <span className="block text-secondary mt-2">
               ваших интересов
             </span>
