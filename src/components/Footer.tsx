@@ -42,7 +42,7 @@ const Footer = () => {
                 <TelegramIcon className="w-4 h-4" />
               </a>
               <a 
-                href="https://max.ru/+79180486112" 
+                href="https://web.max.ru/118666850" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 aria-label="MAX"

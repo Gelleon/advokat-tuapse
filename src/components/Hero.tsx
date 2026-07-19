@@ -17,7 +17,7 @@ const Hero = () => {
   };
 
   const handleMaxClick = () => {
-    window.open('https://max.ru/+79180486112', '_blank');
+    window.open('https://web.max.ru/118666850', '_blank');
     setShowConsultationPopup(false);
   };
 

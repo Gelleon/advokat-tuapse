@@ -82,7 +82,7 @@ const Contact = () => {
                 </a>
 
                 <a
-                  href="https://max.ru/+79180486112"
+                  href="https://web.max.ru/118666850"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full bg-white/5 hover:bg-white/10 text-white border border-white/10 py-4 px-6 rounded-sm font-medium transition-all duration-300 flex items-center justify-center space-x-3"
