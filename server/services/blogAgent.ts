@@ -223,7 +223,7 @@ async function callRouterAI(prompt: string): Promise<string> {
         messages: [
           {
             role: 'system',
-            content: 'Ты редактор правового новостного блога. Пиши ясно, по делу, в стиле деловых СМИ. Отвечай только валидным JSON.'
+            content: 'Ты редактор правового новостного блога. Пиши ясно, по делу, в стиле деловых СМИ. Всегда отвечай только валидным JSON-объектом без markdown-обёртки, комментариев и любого текста вне JSON. Никогда не оставляй поля title и content пустыми или null — если по документу невозможно написать полноценную статью, всё равно сгенерируй осмысленный title и развёрнутый content хотя бы из реквизитов документа и общей практики направления.'
           },
           { role: 'user', content: prompt }
         ]
@@ -301,11 +301,17 @@ function parseArticleJson(raw: string): GeneratedArticle {
   }
 
   if (!parsed.title || !parsed.content) {
+    console.error('AI JSON parsed but missing required fields. Keys:', parsed && typeof parsed === 'object' ? Object.keys(parsed) : '(not an object)');
+    console.error('AI JSON snippet:', JSON.stringify(parsed).slice(0, 1000));
     throw new Error('В ответе ИИ отсутствуют обязательные поля title/content');
   }
 
   const title = String(parsed.title).trim();
   const content = String(parsed.content).trim();
+  if (!title || !content) {
+    console.error('AI title/content are empty after trim. Raw title:', JSON.stringify(parsed.title), 'content length:', content.length);
+    throw new Error('В ответе ИИ отсутствуют обязательные поля title/content');
+  }
   const previewText = ensureExpandedPreview(String(parsed.previewText || ''), content, title);
   const metaDescription = ensureMetaDescription(
     String(parsed.metaDescription || ''),
@@ -348,7 +354,13 @@ export async function generateBlogDraft(input: BlogAgentInput = {}): Promise<Blo
   const brief = buildSourceBrief(details);
   const prompt = await buildPrompt(selected.area, brief);
   const aiRaw = await callRouterAI(prompt);
-  const article = parseArticleJson(aiRaw);
+  let article: GeneratedArticle;
+  try {
+    article = parseArticleJson(aiRaw);
+  } catch (parseErr: any) {
+    console.error('AI raw response (failed to parse):', aiRaw?.slice(0, 2000));
+    throw new Error(`ИИ вернул неожиданный формат: ${parseErr?.message || 'parse error'}`);
+  }
 
   const sourceUrl = getDocumentPublicUrl(details.eoNumber);
   const sourceTitle = details.complexName?.replace(/<br\s*\/?>/gi, ' ') || details.name || sourceUrl;
