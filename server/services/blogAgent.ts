@@ -154,11 +154,13 @@ async function getUsedEoNumbers(): Promise<Set<string>> {
   return used;
 }
 
-async function ensureUniqueSlug(baseSlug: string): Promise<string> {
+async function ensureUniqueSlug(baseSlug: string, ignorePostId?: string): Promise<string> {
   let slug = baseSlug;
   let attempt = 0;
 
-  while (await prisma.post.findUnique({ where: { slug } })) {
+  while (true) {
+    const existing = await prisma.post.findUnique({ where: { slug } });
+    if (!existing || existing.id === ignorePostId) break;
     attempt += 1;
     slug = `${baseSlug}-${attempt}`;
   }
@@ -473,6 +475,102 @@ export async function regeneratePostCover(postId: string) {
     createdAt: updated.createdAt.toISOString(),
     updatedAt: updated.updatedAt.toISOString()
   };
+}
+
+export async function rewriteBlogDraft(postId: string): Promise<BlogAgentResult> {
+  const post = await prisma.post.findUnique({ where: { id: postId } });
+  if (!post) {
+    throw new Error('Публикация не найдена');
+  }
+
+  // Определяем направление практики по тегам (первый тег, совпавший с PRACTICE_AREAS)
+  let area: PracticeArea | null = null;
+  try {
+    const tags = sanitizeTags(post.tags || '[]');
+    area = PRACTICE_AREAS.find((a) => tags.some((t) => t.toLowerCase() === a.title.toLowerCase())) || null;
+  } catch {
+    // ignore
+  }
+  if (!area) {
+    // fallback: «Право» — нейтральное направление
+    area = {
+      id: 'general',
+      title: 'Право',
+      description: 'Юридическая практика адвокатского бюро',
+      keywords: [],
+      features: [
+        'Консультации по правовым вопросам',
+        'Представительство в суде',
+        'Подготовка правовых документов'
+      ]
+    };
+  }
+
+  const brief = buildRewriteBrief(post);
+  const prompt = await buildPrompt(area, brief);
+  const aiRaw = await callRouterAI(prompt);
+  let article: GeneratedArticle;
+  try {
+    article = parseArticleJson(aiRaw);
+  } catch (parseErr: any) {
+    console.error('AI raw response (rewrite failed to parse):', aiRaw?.slice(0, 2000));
+    throw new Error(`ИИ вернул неожиданный формат: ${parseErr?.message || 'parse error'}`);
+  }
+
+  // Сохраняем теги и автора — это метаданные, а не часть текста
+  const tags = buildPostTags(area.title, article.tags);
+
+  const updated = await prisma.post.update({
+    where: { id: postId },
+    data: {
+      title: article.title,
+      slug: await ensureUniqueSlug(article.slug || slugify(article.title), postId),
+      previewText: article.previewText || article.metaDescription || article.title,
+      content: article.content,
+      tags: JSON.stringify(tags),
+      metaTitle: article.metaTitle,
+      metaDescription: article.metaDescription
+    }
+  });
+
+  return {
+    post: {
+      ...updated,
+      tags,
+      publishedAt: updated.publishedAt ? updated.publishedAt.toISOString() : null,
+      createdAt: updated.createdAt.toISOString(),
+      updatedAt: updated.updatedAt.toISOString()
+    },
+    source: {
+      eoNumber: post.id,
+      complexName: post.title,
+      url: '',
+      practiceArea: area.title
+    }
+  };
+}
+
+function buildRewriteBrief(post: {
+  title: string;
+  previewText: string;
+  content: string;
+  metaDescription: string | null;
+  publishedAt: Date | null;
+}): string {
+  const text = stripHtmlToText(post.content || '').slice(0, 4000);
+  return [
+    'Задача: РЕРАЙТ уже опубликованной статьи блога по текущему шаблону.',
+    'Не ищи новый документ — перепиши существующий текст заново по тем же правилам (лид → суть → кому важно → что делать → источник).',
+    'Сохрани смысл, факты, ссылки и цифры. Измени структуру, формулировки и подачу.',
+    '',
+    `Текущий заголовок: ${post.title}`,
+    `Текущее превью: ${post.previewText || ''}`,
+    `Текущее meta description: ${post.metaDescription || ''}`,
+    `Дата оригинала: ${post.publishedAt ? post.publishedAt.toISOString().slice(0, 10) : 'не указана'}`,
+    '',
+    'Текст оригинальной статьи (для справки):',
+    text || '(пусто)'
+  ].join('\n');
 }
 
 export function listPracticeAreasForApi() {

@@ -1,7 +1,7 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth';
-import { generateBlogDraft, listPracticeAreasForApi, regeneratePostCover } from '../services/blogAgent';
+import { generateBlogDraft, listPracticeAreasForApi, regeneratePostCover, rewriteBlogDraft } from '../services/blogAgent';
 
 const router = express.Router();
 const prisma = new PrismaClient();

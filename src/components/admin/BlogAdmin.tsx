@@ -39,6 +39,7 @@ const BlogAdmin = () => {
   const [existingThumbnailUrl, setExistingThumbnailUrl] = useState('');
   const [previewNonce, setPreviewNonce] = useState(0);
   const [isRegeneratingImage, setIsRegeneratingImage] = useState(false);
+  const [isRewriting, setIsRewriting] = useState(false);
 
   const [practiceAreaId, setPracticeAreaId] = useState('auto');
   const [periodType, setPeriodType] = useState<'weekly' | 'monthly'>('weekly');
@@ -242,7 +243,69 @@ const BlogAdmin = () => {
     }
   };
 
-  const handleRegenerateImage = async () => {
+  const handleRewriteArticle = async () => {
+  if (!editingId) {
+    alert('Сначала откройте статью для редактирования');
+    return;
+  }
+
+  if (!confirm('Переписать эту статью по текущему промпту? Текущий текст будет заменён новой версией ИИ.')) {
+    return;
+  }
+
+  setIsRewriting(true);
+  setAgentMessage(null);
+
+  try {
+    const response = await fetch(`${API_URL}/ai/blog/rewrite`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ postId: editingId }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Не удалось переписать статью');
+    }
+
+    const post = data.post as Post;
+    setFormData({
+      title: post.title,
+      slug: post.slug,
+      previewText: post.previewText,
+      content: post.content,
+      category: post.category || 'Отраслевые новости',
+      tags: post.tags || [],
+      author: post.author || formData.author || 'Адвокаты Туапсе',
+      status: formData.status || 'DRAFT',
+      publishedAt: post.publishedAt ? new Date(post.publishedAt).toISOString().slice(0, 16) : (formData.publishedAt || nowLocalInput()),
+      metaTitle: post.metaTitle || '',
+      metaDescription: post.metaDescription || ''
+    });
+    setExistingThumbnailUrl(post.thumbnailUrl || '');
+    setThumbnailName(post.thumbnailUrl ? 'Обложка сохранена' : '');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    setPreviewNonce(Date.now());
+    await refreshPosts();
+
+    setAgentMessage({
+      text: `Статья переписана по текущему промпту. Проверьте и сохраните изменения.`,
+      type: 'success'
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } catch (error: any) {
+    console.error('Blog rewrite failed:', error);
+    setAgentMessage({
+      text: error?.message || 'Ошибка рерайта статьи',
+      type: 'error'
+    });
+  } finally {
+    setIsRewriting(false);
+  }
+};
+
+const handleRegenerateImage = async () => {
     if (!editingId) {
       alert('Сначала сохраните или сгенерируйте статью');
       return;
@@ -641,6 +704,30 @@ const BlogAdmin = () => {
               <textarea name="metaDescription" value={formData.metaDescription} onChange={handleInputChange} rows={2} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"></textarea>
             </div>
           </div>
+
+          {editingId && (
+            <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 mt-6">
+              <div className="flex items-start gap-3">
+                <Sparkles className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-slate-800">Рерайт по текущему промпту</h3>
+                  <p className="text-xs text-slate-600 mt-1">
+                    Перепишет заголовок, превью, текст и SEO по последнему сохранённому промпту.
+                    Обложка и дата публикации не меняются. Изменения применятся после нажатия «Сохранить черновик» или «Опубликовать».
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleRewriteArticle}
+                    disabled={isRewriting || isGenerating}
+                    className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white rounded-lg text-sm font-semibold transition-colors"
+                  >
+                    {isRewriting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                    {isRewriting ? 'Переписываем статью…' : 'Переписать по текущему промпту'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="pt-4 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-3">
             <button
