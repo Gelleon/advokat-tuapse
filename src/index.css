@@ -348,7 +348,6 @@
 
   /* Новостная типографика статьи */
   .article-body {
-    max-width: 42rem;
     color: #1f2937;
     font-size: 1.125rem;
     line-height: 1.8;
