@@ -81,8 +81,8 @@ router.post('/blog/generate', authenticateToken, async (req, res) => {
   try {
     const { practiceAreaId, periodType, author } = req.body || {};
 
-    if (periodType && !['daily', 'weekly', 'monthly'].includes(periodType)) {
-      return res.status(400).json({ error: 'periodType должен быть daily, weekly или monthly' });
+    if (periodType && !['daily', 'weekly', 'monthly', 'quarterly'].includes(periodType)) {
+      return res.status(400).json({ error: 'periodType должен быть daily, weekly, monthly или quarterly' });
     }
 
     const result = await generateBlogDraft({

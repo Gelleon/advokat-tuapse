@@ -374,12 +374,13 @@ const BlogAdmin = () => {
             <label className="block text-sm font-medium text-slate-700 mb-1">Период поиска</label>
             <select
               value={periodType}
-              onChange={(e) => setPeriodType(e.target.value as 'weekly' | 'monthly')}
+              onChange={(e) => setPeriodType(e.target.value as 'weekly' | 'monthly' | 'quarterly')}
               disabled={isGenerating}
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
             >
               <option value="weekly">За неделю</option>
               <option value="monthly">За месяц</option>
+              <option value="quarterly">За 3 месяца</option>
             </select>
           </div>
           <div>

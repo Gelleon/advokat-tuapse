@@ -1,6 +1,6 @@
 const PRAVO_API_BASE = 'http://publication.pravo.gov.ru';
 
-export type PravoPeriodType = 'daily' | 'weekly' | 'monthly';
+export type PravoPeriodType = 'daily' | 'weekly' | 'monthly' | 'quarterly';
 
 export interface PravoDocument {
   id: string;
