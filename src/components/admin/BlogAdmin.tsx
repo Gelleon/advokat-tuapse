@@ -40,6 +40,7 @@ const BlogAdmin = () => {
   const [previewNonce, setPreviewNonce] = useState(0);
   const [isRegeneratingImage, setIsRegeneratingImage] = useState(false);
   const [isRewriting, setIsRewriting] = useState(false);
+  const [rewriteNotice, setRewriteNotice] = useState<{ at: number; oldTitle: string; newTitle: string } | null>(null);
 
   const [practiceAreaId, setPracticeAreaId] = useState('auto');
   const [periodType, setPeriodType] = useState<'weekly' | 'monthly'>('weekly');
@@ -255,6 +256,11 @@ const BlogAdmin = () => {
 
   setIsRewriting(true);
   setAgentMessage(null);
+  setRewriteNotice(null);
+
+  const previousTitle = formData.title || '';
+  const previousPreview = formData.previewText || '';
+  const previousContentLen = (formData.content || '').length;
 
   try {
     const response = await fetch(`${API_URL}/ai/blog/rewrite`, {
@@ -289,11 +295,23 @@ const BlogAdmin = () => {
     setPreviewNonce(Date.now());
     await refreshPosts();
 
+    setRewriteNotice({
+      at: Date.now(),
+      oldTitle: previousTitle,
+      newTitle: post.title || ''
+    });
     setAgentMessage({
-      text: `Статья переписана по текущему промпту. Проверьте и сохраните изменения.`,
+      text: `Рерайт выполнен. Заголовок: «${previousTitle || '—'}» → «${post.title || '—'}». Сохраните изменения кнопкой ниже.`,
       type: 'success'
     });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // Прокрутка к самому верху формы, чтобы пользователь увидел баннер успеха
+    const formTop = document.getElementById('blog-form-top');
+    if (formTop) {
+      formTop.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   } catch (error: any) {
     console.error('Blog rewrite failed:', error);
     setAgentMessage({
@@ -548,6 +566,34 @@ const handleRegenerateImage = async () => {
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       {/* Form */}
       <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <div id="blog-form-top" />
+        {rewriteNotice && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-start gap-3" data-testid="rewrite-success-banner">
+            <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center flex-shrink-0 mt-0.5">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                <path fillRule="evenodd" d="M16.704 5.29a1 1 0 010 1.42l-7.5 7.5a1 1 0 01-1.42 0l-3.5-3.5a1 1 0 011.42-1.42L8.5 12.08l6.79-6.79a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-green-800">Рерайт выполнен успешно</p>
+              <p className="text-sm text-green-700 mt-1 break-words">
+                Заголовок: <span className="line-through opacity-70">{rewriteNotice.oldTitle || '—'}</span>
+                {' → '}
+                <span className="font-medium">{rewriteNotice.newTitle || '—'}</span>
+              </p>
+              <p className="text-xs text-green-700 mt-2">
+                Поля формы ниже обновлены. Чтобы изменения попали в БД, нажмите «Сохранить черновик» или «Опубликовать на сайте».
+              </p>
+              <button
+                type="button"
+                onClick={() => setRewriteNotice(null)}
+                className="mt-2 text-xs text-green-700 hover:text-green-900 underline"
+              >
+                Скрыть уведомление
+              </button>
+            </div>
+          </div>
+        )}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-slate-800">
             {editingId ? 'Редактировать публикацию' : 'Добавить новую публикацию'}
@@ -715,6 +761,12 @@ const handleRegenerateImage = async () => {
                     Перепишет заголовок, превью, текст и SEO по последнему сохранённому промпту.
                     Обложка и дата публикации не меняются. Изменения применятся после нажатия «Сохранить черновик» или «Опубликовать».
                   </p>
+                  {isRewriting && (
+                    <div className="mt-2 flex items-center gap-2 text-xs text-amber-700" data-testid="rewrite-progress">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ИИ переписывает статью — обычно 20–60 секунд. Не закрывайте вкладку.
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={handleRewriteArticle}
