@@ -119,4 +119,22 @@ router.post('/blog/regenerate-image', authenticateToken, async (req, res) => {
   }
 });
 
+router.post('/blog/rewrite', authenticateToken, async (req, res) => {
+  try {
+    const { postId } = req.body || {};
+    if (!postId) {
+      return res.status(400).json({ error: 'Не указан postId' });
+    }
+
+    const result = await rewriteBlogDraft(String(postId));
+    res.json(result);
+  } catch (error: any) {
+    console.error('Blog rewrite error:', error);
+    if (error?.name === 'AbortError') {
+      return res.status(504).json({ error: 'Превышено время ожидания ответа от ИИ' });
+    }
+    res.status(500).json({ error: error?.message || 'Ошибка рерайта статьи' });
+  }
+});
+
 export default router;
