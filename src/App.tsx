@@ -7,6 +7,7 @@ import Blog from './pages/Blog';
 import BlogPost from './pages/BlogPost';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
+import ServicePage from './pages/ServicePage';
 import { API_URL } from './config';
 import { CasesProvider } from './store/useCases';
 
@@ -88,6 +89,8 @@ function App() {
               <Admin />
             </ProtectedRoute>
           } />
+          <Route path="/:areaSlug" element={<ServicePage />} />
+          <Route path="/:areaSlug/:topicSlug" element={<ServicePage />} />
         </Routes>
       </CasesProvider>
       </BrowserRouter>

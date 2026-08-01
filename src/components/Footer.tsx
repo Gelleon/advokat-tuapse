@@ -24,7 +24,7 @@ const Footer = () => {
       <div className="container mx-auto px-6 py-20 max-w-7xl">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
           {/* Company Info */}
-          <div className="lg:col-span-2 pr-0 lg:pr-12">
+          <div className="pr-0 lg:pr-8">
             <div className="flex items-center space-x-3 mb-8">
               <Scale className="w-8 h-8 text-secondary" strokeWidth={1.5} />
               <h3 className="text-2xl font-serif font-bold tracking-wide">Адвокаты Туапсе</h3>
@@ -56,13 +56,26 @@ const Footer = () => {
             </div>
           </div>
 
+          <div>
+            <h4 className="text-xs font-medium tracking-widest uppercase text-white/40 mb-6">Услуги</h4>
+            <div className="flex flex-col space-y-3">
+              <Link to="/ugolovnye-dela" className="text-white/80 hover:text-secondary transition-colors font-light">Уголовные дела</Link>
+              <Link to="/semeynye-spory" className="text-white/80 hover:text-secondary transition-colors font-light">Семейные споры</Link>
+              <Link to="/zemelnye-spory" className="text-white/80 hover:text-secondary transition-colors font-light">Земельные споры</Link>
+              <Link to="/bankrotstvo" className="text-white/80 hover:text-secondary transition-colors font-light">Банкротство</Link>
+              <Link to="/arbitrazhnye-spory" className="text-white/80 hover:text-secondary transition-colors font-light">Арбитражные споры</Link>
+              <Link to="/nasledstvennye-spory" className="text-white/80 hover:text-secondary transition-colors font-light">Наследственные споры</Link>
+            </div>
+          </div>
+
           {/* Quick Links */}
           <div>
             <h4 className="text-xs font-medium tracking-widest uppercase text-white/40 mb-6">Навигация</h4>
             <div className="flex flex-col space-y-4">
-              <Link to="/#services" className="text-white/80 hover:text-secondary transition-colors font-light">Услуги</Link>
+              <Link to="/#services" className="text-white/80 hover:text-secondary transition-colors font-light">Все услуги</Link>
               <Link to="/#portfolio" className="text-white/80 hover:text-secondary transition-colors font-light">Наши дела</Link>
               <Link to="/blog" className="text-white/80 hover:text-secondary transition-colors font-light">Блог</Link>
+              <Link to="/#contact" className="text-white/80 hover:text-secondary transition-colors font-light">Контакты</Link>
             </div>
           </div>
 

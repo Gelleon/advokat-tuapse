@@ -1,8 +1,46 @@
 'use strict';
 
+const SERVICE_AREA_ROUTES = [
+  '/ugolovnye-dela',
+  '/semeynye-spory',
+  '/zemelnye-spory',
+  '/bankrotstvo',
+  '/arbitrazhnye-spory',
+  '/nasledstvennye-spory',
+];
+
+const SERVICE_TOPIC_ROUTES = [
+  '/ugolovnye-dela/predvaritelnoe-sledstvie',
+  '/ugolovnye-dela/sudebnoe-razbiratelstvo',
+  '/ugolovnye-dela/obzhalovanie-deystviy',
+  '/ugolovnye-dela/zashchita-poterpevshih',
+  '/semeynye-spory/razdel-imushchestva',
+  '/semeynye-spory/alimenty',
+  '/semeynye-spory/zashchita-supruga-pri-bankrotstve',
+  '/semeynye-spory/brachnye-dogovory',
+  '/zemelnye-spory/ustanovlenie-granic',
+  '/zemelnye-spory/sobstvennost-i-arenda',
+  '/zemelnye-spory/kadastrovaya-oshibka',
+  '/zemelnye-spory/samovolnye-stroeniya',
+  '/bankrotstvo/fizicheskih-lic',
+  '/bankrotstvo/yuridicheskih-lic',
+  '/bankrotstvo/zashchita-imushchestva',
+  '/bankrotstvo/spisanie-dolgov',
+  '/arbitrazhnye-spory/ekonomicheskie-spory',
+  '/arbitrazhnye-spory/korporativnye-spory',
+  '/arbitrazhnye-spory/nalogovye-spory',
+  '/arbitrazhnye-spory/ispolnitelnoe-proizvodstvo',
+  '/nasledstvennye-spory/vosstanovlenie-sroka',
+  '/nasledstvennye-spory/ustanovlenie-rodstva',
+  '/nasledstvennye-spory/nasledstvennaya-massa',
+  '/nasledstvennye-spory/pravo-sobstvennosti',
+];
+
 const STATIC_ROUTES = [
   { url: '/', priority: '1.0', changefreq: 'weekly' },
   { url: '/blog', priority: '0.9', changefreq: 'daily' },
+  ...SERVICE_AREA_ROUTES.map((url) => ({ url, priority: '0.8', changefreq: 'monthly' })),
+  ...SERVICE_TOPIC_ROUTES.map((url) => ({ url, priority: '0.7', changefreq: 'monthly' })),
   { url: '/privacy', priority: '0.3', changefreq: 'yearly' },
   { url: '/terms', priority: '0.3', changefreq: 'yearly' },
 ];

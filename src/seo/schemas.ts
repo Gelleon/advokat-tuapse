@@ -137,3 +137,40 @@ export function breadcrumbSchema(items: { name: string; path: string }[]) {
     })),
   };
 }
+
+export function faqSchema(faqs: { question: string; answer: string }[]) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((faq) => ({
+      '@type': 'Question',
+      name: faq.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.answer,
+      },
+    })),
+  };
+}
+
+export function serviceSchema(options: {
+  name: string;
+  description: string;
+  path: string;
+}) {
+  const base = legalServiceSchema();
+  return {
+    ...base,
+    name: options.name,
+    description: options.description,
+    url: `${SITE_URL}${options.path.startsWith('/') ? options.path : `/${options.path}`}`,
+    serviceType: options.name,
+    provider: {
+      '@type': 'LegalService',
+      name: SITE_NAME,
+      url: SITE_URL,
+      telephone: BUSINESS.phone,
+      address: base.address,
+    },
+  };
+}
