@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build && node server/generate-sitemap.cjs dist/sitemap.xml",
     "generate:sitemap": "node server/generate-sitemap.cjs dist/sitemap.xml",
+    "generate:feed-data": "node scripts/extract-service-feed-data.cjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },

@@ -15,6 +15,7 @@ dotenv.config();
 
 const require = createRequire(__filename);
 const { generateSitemapXml } = require('./sitemap.cjs');
+const { generateServicesYml } = require('./feeds/servicesYml.cjs');
 
 const app = express();
 const prisma = new PrismaClient();
@@ -81,6 +82,22 @@ const handleSitemap = async (_req: express.Request, res: express.Response) => {
 
 app.get('/sitemap.xml', handleSitemap);
 app.get('/api/sitemap.xml', handleSitemap);
+
+const handleServicesFeed = (_req: express.Request, res: express.Response) => {
+  try {
+    const baseUrl = process.env.FRONTEND_URL || 'https://advokat-tuapse.ru';
+    const yml = generateServicesYml(baseUrl);
+    res.header('Content-Type', 'application/xml; charset=utf-8');
+    res.header('Cache-Control', 'public, max-age=3600');
+    res.send(yml);
+  } catch (error) {
+    console.error(error);
+    res.status(500).end();
+  }
+};
+
+app.get('/feed.yml', handleServicesFeed);
+app.get('/api/feed.yml', handleServicesFeed);
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
