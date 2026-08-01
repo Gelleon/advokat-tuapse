@@ -81,16 +81,21 @@ router.get('/blog/practice-areas', authenticateToken, (_req, res) => {
 
 router.post('/blog/generate', authenticateToken, async (req, res) => {
   try {
-    const { practiceAreaId, periodType, author } = req.body || {};
+    const { practiceAreaId, periodType, author, source } = req.body || {};
 
     if (periodType && !['daily', 'weekly', 'monthly', 'quarterly'].includes(periodType)) {
       return res.status(400).json({ error: 'periodType должен быть daily, weekly, monthly или quarterly' });
     }
 
+    if (source && !['pravo', 'consultant'].includes(source)) {
+      return res.status(400).json({ error: 'source должен быть pravo или consultant' });
+    }
+
     const result = await generateBlogDraft({
       practiceAreaId: practiceAreaId || 'auto',
       periodType,
-      author
+      author,
+      source: source || 'pravo'
     });
 
     res.status(201).json(result);

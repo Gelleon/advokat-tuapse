@@ -44,6 +44,7 @@ const BlogAdmin = () => {
 
   const [practiceAreaId, setPracticeAreaId] = useState('auto');
   const [periodType, setPeriodType] = useState<'weekly' | 'monthly'>('weekly');
+  const [blogSource, setBlogSource] = useState<'pravo' | 'consultant'>('pravo');
   const [isGenerating, setIsGenerating] = useState(false);
   const [agentMessage, setAgentMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -189,6 +190,7 @@ const BlogAdmin = () => {
         body: JSON.stringify({
           practiceAreaId,
           periodType,
+          source: blogSource,
           author: formData.author || 'Адвокаты Туапсе'
         })
       });
@@ -221,14 +223,15 @@ const BlogAdmin = () => {
       setPreviewNonce(Date.now());
       await refreshPosts();
 
+      const sourceName = data.source?.provider === 'consultant' ? 'ConsultantPlus' : 'pravo.gov.ru';
       if (post.thumbnailUrl) {
         setAgentMessage({
-          text: `Черновик и обложка созданы по документу: ${data.source?.complexName || data.source?.eoNumber}. Проверьте и опубликуйте.`,
+          text: `Черновик и обложка созданы (${sourceName}): ${data.source?.complexName || data.source?.eoNumber}. Проверьте и опубликуйте.`,
           type: 'success'
         });
       } else {
         setAgentMessage({
-          text: `Черновик создан без обложки. ${data.imageError || 'Можно нажать «Сгенерировать обложку» или загрузить фото вручную.'} Источник: ${data.source?.complexName || data.source?.eoNumber}.`,
+          text: `Черновик создан без обложки. ${data.imageError || 'Можно нажать «Сгенерировать обложку» или загрузить фото вручную.'} Источник (${sourceName}): ${data.source?.complexName || data.source?.eoNumber}.`,
           type: 'error'
         });
       }
@@ -432,13 +435,25 @@ const handleRegenerateImage = async () => {
               AI-агент блога
             </h2>
             <p className="text-sm text-slate-500 mt-1">
-              Ищет акты на publication.pravo.gov.ru, пишет SEO-статью, генерирует обложку и сохраняет черновик.
+              Берёт документ из выбранного источника, пишет SEO-статью, генерирует обложку и сохраняет черновик.
             </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-          <div className="md:col-span-1">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 items-end">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Источник</label>
+            <select
+              value={blogSource}
+              onChange={(e) => setBlogSource(e.target.value as 'pravo' | 'consultant')}
+              disabled={isGenerating}
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
+            >
+              <option value="pravo">pravo.gov.ru</option>
+              <option value="consultant">consultant.ru — Горячие документы</option>
+            </select>
+          </div>
+          <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Направление</label>
             <select
               value={practiceAreaId}

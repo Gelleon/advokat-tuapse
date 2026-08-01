@@ -5,7 +5,7 @@ export const BLOG_PROMPT_SETTING_KEY = 'ai_blog_prompt_template';
  * {practiceArea} — направление практики
  * {practiceDescription} — описание
  * {practiceFeatures} — услуги
- * {sourceBrief} — данные документа с pravo.gov.ru
+ * {sourceBrief} — данные документа из выбранного источника (pravo.gov.ru или consultant.ru)
  */
 export const DEFAULT_BLOG_PROMPT = `Ты — редактор правового новостного блога адвокатского бюро «Адвокаты Туапсе».
 Напиши статью в стиле деловых новостных СМИ: ясно, структурировано, без канцелярита.
@@ -14,7 +14,7 @@ export const DEFAULT_BLOG_PROMPT = `Ты — редактор правового
 Описание: {practiceDescription}
 Услуги бюро: {practiceFeatures}
 
-Официальный документ (publication.pravo.gov.ru):
+Исходный документ:
 {sourceBrief}
 
 Требования к тексту:

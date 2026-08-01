@@ -14,6 +14,13 @@ import {
   getDocumentDetails,
   getDocumentPublicUrl
 } from './pravoApi';
+import {
+  ConsultantHotDoc,
+  consultantSearchText,
+  fetchConsultantHotDocs,
+  filterConsultantByPeriod,
+  getConsultantPublicUrl
+} from './consultantRss';
 import { slugify } from '../utils/slugify';
 import { sanitizeTags } from '../utils/tags';
 import { generateBlogCoverImage } from './imageGenerator';
@@ -21,10 +28,13 @@ import { getChatModel } from './aiModel';
 
 const prisma = new PrismaClient();
 
+export type BlogSourceId = 'pravo' | 'consultant';
+
 export interface BlogAgentInput {
   practiceAreaId?: string; // конкретное направление или auto
   periodType?: PravoPeriodType;
   author?: string;
+  source?: BlogSourceId;
 }
 
 export interface GeneratedArticle {
@@ -56,6 +66,7 @@ export interface BlogAgentResult {
     updatedAt: string;
   };
   source: {
+    provider: BlogSourceId;
     eoNumber: string;
     complexName: string;
     url: string;
@@ -66,6 +77,12 @@ export interface BlogAgentResult {
 
 interface RankedDocument {
   doc: PravoDocument;
+  area: PracticeArea;
+  score: number;
+}
+
+interface RankedConsultantDoc {
+  doc: ConsultantHotDoc;
   area: PracticeArea;
   score: number;
 }
@@ -81,8 +98,7 @@ function matchesKeyword(text: string, keyword: string): boolean {
   return text.includes(kw);
 }
 
-function scoreDocument(doc: PravoDocument, area: PracticeArea): number {
-  const text = documentSearchText(doc);
+function scoreSearchText(text: string, area: PracticeArea): number {
   let score = 0;
 
   for (const keyword of area.keywords) {
@@ -99,6 +115,14 @@ function scoreDocument(doc: PravoDocument, area: PracticeArea): number {
   if (text.includes('по делу о проверке')) score += 2;
 
   return score;
+}
+
+function scoreDocument(doc: PravoDocument, area: PracticeArea): number {
+  return scoreSearchText(documentSearchText(doc), area);
+}
+
+function scoreConsultantDoc(doc: ConsultantHotDoc, area: PracticeArea): number {
+  return scoreSearchText(consultantSearchText(doc), area);
 }
 
 function rankDocuments(
@@ -133,26 +157,64 @@ function rankDocuments(
   return ranked;
 }
 
-async function getUsedEoNumbers(): Promise<Set<string>> {
-  const posts = await prisma.post.findMany({ select: { tags: true, content: true, slug: true } });
-  const used = new Set<string>();
+function rankConsultantDocuments(
+  documents: ConsultantHotDoc[],
+  practiceAreaId?: string
+): RankedConsultantDoc[] {
+  const areas = practiceAreaId && practiceAreaId !== 'auto'
+    ? [getPracticeArea(practiceAreaId)].filter(Boolean) as PracticeArea[]
+    : PRACTICE_AREAS;
+
+  if (areas.length === 0) {
+    throw new Error('Неизвестное направление практики');
+  }
+
+  const ranked: RankedConsultantDoc[] = [];
+
+  for (const doc of documents) {
+    let best: RankedConsultantDoc | null = null;
+
+    for (const area of areas) {
+      const score = scoreConsultantDoc(doc, area);
+      if (score <= 0) continue;
+      if (!best || score > best.score) {
+        best = { doc, area, score };
+      }
+    }
+
+    if (best) ranked.push(best);
+  }
+
+  ranked.sort((a, b) => b.score - a.score || b.doc.pubDateMs - a.doc.pubDateMs);
+  return ranked;
+}
+
+async function getUsedSourceIds(): Promise<{ pravo: Set<string>; consultant: Set<string> }> {
+  const posts = await prisma.post.findMany({ select: { tags: true, content: true } });
+  const pravo = new Set<string>();
+  const consultant = new Set<string>();
 
   for (const post of posts) {
     try {
       const tags: string[] = JSON.parse(post.tags || '[]');
       for (const tag of tags) {
-        const match = String(tag).match(/^pravo:([0-9a-z]+)$/i);
-        if (match) used.add(match[1]);
+        const pravoTag = String(tag).match(/^pravo:([0-9a-z]+)$/i);
+        if (pravoTag) pravo.add(pravoTag[1]);
+        const consultantTag = String(tag).match(/^consultant:(\d+)$/i);
+        if (consultantTag) consultant.add(consultantTag[1]);
       }
     } catch {
       // ignore malformed tags
     }
 
-    const contentMatch = post.content?.match(/pravo\.gov\.ru\/document\/([0-9a-z]+)/i);
-    if (contentMatch) used.add(contentMatch[1]);
+    const pravoMatch = post.content?.match(/pravo\.gov\.ru\/document\/([0-9a-z]+)/i);
+    if (pravoMatch) pravo.add(pravoMatch[1]);
+
+    const consultantMatch = post.content?.match(/consultant\.ru\/law\/hotdocs\/(\d+)\.html/i);
+    if (consultantMatch) consultant.add(consultantMatch[1]);
   }
 
-  return used;
+  return { pravo, consultant };
 }
 
 async function ensureUniqueSlug(baseSlug: string, ignorePostId?: string): Promise<string> {
@@ -175,6 +237,7 @@ function buildSourceBrief(details: PravoDocumentDetails): string {
     || 'орган государственной власти';
 
   return [
+    `Источник: publication.pravo.gov.ru`,
     `Вид документа: ${details.documentType?.name || 'не указан'}`,
     `Принявший орган: ${authority}`,
     `Название: ${details.name}`,
@@ -183,7 +246,18 @@ function buildSourceBrief(details: PravoDocumentDetails): string {
     `Дата подписания: ${details.documentDate || 'не указана'}`,
     `Дата официального опубликования: ${details.viewDate || details.publishDateShort || 'не указана'}`,
     `Номер электронного опубликования (eoNumber): ${details.eoNumber}`,
-    `Ссылка на официальную публикацию: ${getDocumentPublicUrl(details.eoNumber)}`
+    `Ссылка: ${getDocumentPublicUrl(details.eoNumber)}`
+  ].join('\n');
+}
+
+function buildConsultantSourceBrief(doc: ConsultantHotDoc): string {
+  return [
+    `Источник: КонсультантПлюс («Горячие» документы)`,
+    `Название: ${doc.title}`,
+    `Краткое описание: ${doc.description || 'не указано'}`,
+    `Дата публикации в ленте: ${doc.pubDate || 'не указана'}`,
+    `Идентификатор: ${doc.id}`,
+    `Ссылка: ${doc.url || getConsultantPublicUrl(doc.id)}`
   ].join('\n');
 }
 
@@ -334,29 +408,87 @@ function parseArticleJson(raw: string): GeneratedArticle {
   };
 }
 
-export async function generateBlogDraft(input: BlogAgentInput = {}): Promise<BlogAgentResult> {
+async function pickPravoSource(input: BlogAgentInput): Promise<{
+  area: PracticeArea;
+  brief: string;
+  sourceUrl: string;
+  sourceTitle: string;
+  sourceId: string;
+}> {
   const periodType: PravoPeriodType = input.periodType || 'weekly';
-  const author = input.author?.trim() || 'Адвокаты Туапсе';
-
   const documents = await fetchRecentDocuments(periodType, 2);
   if (documents.length === 0) {
     throw new Error('Не удалось получить документы с publication.pravo.gov.ru');
   }
 
-  const usedEo = await getUsedEoNumbers();
+  const used = await getUsedSourceIds();
   const ranked = rankDocuments(documents, input.practiceAreaId)
-    .filter((item) => !usedEo.has(item.doc.eoNumber));
+    .filter((item) => !used.pravo.has(item.doc.eoNumber));
 
   if (ranked.length === 0) {
     throw new Error(
-      'Не найдено новых релевантных документов за выбранный период. Попробуйте другой период или направление.'
+      'Не найдено новых релевантных документов на pravo.gov.ru за выбранный период. Попробуйте другой период, направление или источник.'
     );
   }
 
   const selected = ranked[0];
   const details = await getDocumentDetails(selected.doc.eoNumber);
-  const brief = buildSourceBrief(details);
-  const prompt = await buildPrompt(selected.area, brief);
+  const sourceUrl = getDocumentPublicUrl(details.eoNumber);
+  const sourceTitle = details.complexName?.replace(/<br\s*\/?>/gi, ' ') || details.name || sourceUrl;
+
+  return {
+    area: selected.area,
+    brief: buildSourceBrief(details),
+    sourceUrl,
+    sourceTitle,
+    sourceId: details.eoNumber
+  };
+}
+
+async function pickConsultantSource(input: BlogAgentInput): Promise<{
+  area: PracticeArea;
+  brief: string;
+  sourceUrl: string;
+  sourceTitle: string;
+  sourceId: string;
+}> {
+  const periodType: PravoPeriodType = input.periodType || 'weekly';
+  const documents = filterConsultantByPeriod(await fetchConsultantHotDocs(), periodType);
+  if (documents.length === 0) {
+    throw new Error('Не удалось получить ленту «Горячие документы» с consultant.ru');
+  }
+
+  const used = await getUsedSourceIds();
+  const ranked = rankConsultantDocuments(documents, input.practiceAreaId)
+    .filter((item) => !used.consultant.has(item.doc.id));
+
+  if (ranked.length === 0) {
+    throw new Error(
+      'Не найдено новых релевантных документов на consultant.ru. Попробуйте другое направление, период или источник.'
+    );
+  }
+
+  const selected = ranked[0];
+  const sourceUrl = selected.doc.url || getConsultantPublicUrl(selected.doc.id);
+
+  return {
+    area: selected.area,
+    brief: buildConsultantSourceBrief(selected.doc),
+    sourceUrl,
+    sourceTitle: selected.doc.title,
+    sourceId: selected.doc.id
+  };
+}
+
+export async function generateBlogDraft(input: BlogAgentInput = {}): Promise<BlogAgentResult> {
+  const author = input.author?.trim() || 'Адвокаты Туапсе';
+  const provider: BlogSourceId = input.source === 'consultant' ? 'consultant' : 'pravo';
+
+  const picked = provider === 'consultant'
+    ? await pickConsultantSource(input)
+    : await pickPravoSource(input);
+
+  const prompt = await buildPrompt(picked.area, picked.brief);
   const aiRaw = await callRouterAI(prompt);
   let article: GeneratedArticle;
   try {
@@ -366,12 +498,11 @@ export async function generateBlogDraft(input: BlogAgentInput = {}): Promise<Blo
     throw new Error(`ИИ вернул неожиданный формат: ${parseErr?.message || 'parse error'}`);
   }
 
-  const sourceUrl = getDocumentPublicUrl(details.eoNumber);
-  const sourceTitle = details.complexName?.replace(/<br\s*\/?>/gi, ' ') || details.name || sourceUrl;
-  const tags = buildPostTags(selected.area.title, article.tags);
+  const tags = buildPostTags(picked.area.title, article.tags);
+  const sourceLabel = provider === 'consultant' ? 'Источник (КонсультантПлюс)' : 'Официальная публикация';
 
-  if (!article.content.includes(sourceUrl)) {
-    article.content += `<p class="article-source">Официальная публикация: <a href="${sourceUrl}" target="_blank" rel="noopener noreferrer">${sourceTitle}</a></p>`;
+  if (!article.content.includes(picked.sourceUrl)) {
+    article.content += `<p class="article-source">${sourceLabel}: <a href="${picked.sourceUrl}" target="_blank" rel="noopener noreferrer">${picked.sourceTitle}</a></p>`;
   }
 
   if (!article.content.toLowerCase().includes('информацион')) {
@@ -392,7 +523,7 @@ export async function generateBlogDraft(input: BlogAgentInput = {}): Promise<Blo
   const cover = await generateBlogCoverImage({
     title: article.title,
     previewText: article.previewText || article.metaDescription || '',
-    practiceArea: selected.area.title,
+    practiceArea: picked.area.title,
     category,
     content: article.content
   });
@@ -427,10 +558,11 @@ export async function generateBlogDraft(input: BlogAgentInput = {}): Promise<Blo
       updatedAt: created.updatedAt.toISOString()
     },
     source: {
-      eoNumber: details.eoNumber,
-      complexName: details.complexName?.replace(/<br\s*\/?>/gi, ' ') || details.name,
-      url: sourceUrl,
-      practiceArea: selected.area.title
+      provider,
+      eoNumber: picked.sourceId,
+      complexName: picked.sourceTitle,
+      url: picked.sourceUrl,
+      practiceArea: picked.area.title
     },
     imageError: cover.error
   };

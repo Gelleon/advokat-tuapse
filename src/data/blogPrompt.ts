@@ -7,7 +7,7 @@ export const DEFAULT_BLOG_PROMPT = `Ты — редактор правового
 Описание: {practiceDescription}
 Услуги бюро: {practiceFeatures}
 
-Официальный документ (publication.pravo.gov.ru):
+Исходный документ:
 {sourceBrief}
 
 Требования к тексту:
