@@ -17,6 +17,7 @@ import {
 import { slugify } from '../utils/slugify';
 import { sanitizeTags } from '../utils/tags';
 import { generateBlogCoverImage } from './imageGenerator';
+import { getChatModel } from './aiModel';
 
 const prisma = new PrismaClient();
 
@@ -209,6 +210,7 @@ async function callRouterAI(prompt: string): Promise<string> {
     throw new Error('ROUTERAI_API_KEY не настроен на сервере');
   }
 
+  const model = await getChatModel();
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 90000);
 
@@ -220,7 +222,7 @@ async function callRouterAI(prompt: string): Promise<string> {
         Authorization: `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'openai/gpt-4o-mini',
+        model,
         temperature: 0.5,
         messages: [
           {

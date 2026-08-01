@@ -7,11 +7,11 @@ import {
   buildArticleExcerpt,
   renderImagePrompt
 } from '../data/imagePrompt';
+import { getChatModel } from './aiModel';
 
 const prisma = new PrismaClient();
 
 const IMAGE_MODEL = 'recraft/recraft-v4.1-utility';
-const CHAT_MODEL = 'openai/gpt-4o-mini';
 /** Landscape 16:9 — supported by Recraft V4.1 Utility */
 const IMAGE_SIZE = '1344x768';
 const UPLOAD_DIR = path.join(__dirname, '../../uploads/blog');
@@ -82,6 +82,7 @@ async function buildSceneBrief(input: {
   articleExcerpt: string;
 }): Promise<string> {
   const excerpt = input.articleExcerpt || input.previewText || input.title;
+  const model = await getChatModel();
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 45000);
 
@@ -93,7 +94,7 @@ async function buildSceneBrief(input: {
         Authorization: `Bearer ${input.apiKey}`
       },
       body: JSON.stringify({
-        model: CHAT_MODEL,
+        model,
         temperature: 0.3,
         messages: [
           {

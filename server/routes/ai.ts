@@ -2,6 +2,7 @@ import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth';
 import { generateBlogDraft, listPracticeAreasForApi, regeneratePostCover, rewriteBlogDraft } from '../services/blogAgent';
+import { getChatModel } from '../services/aiModel';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -28,7 +29,8 @@ router.post('/optimize', authenticateToken, async (req, res) => {
       return res.status(500).json({ error: 'ROUTERAI_API_KEY не настроен на сервере' });
     }
 
-    console.log('Sending request to RouterAI...');
+    const model = await getChatModel();
+    console.log('Sending request to RouterAI...', model);
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
@@ -39,7 +41,7 @@ router.post('/optimize', authenticateToken, async (req, res) => {
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'openai/gpt-4o-mini', // Default fast model
+        model,
         messages: [
           { role: 'user', content: prompt }
         ],

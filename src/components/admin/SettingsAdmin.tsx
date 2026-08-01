@@ -3,11 +3,19 @@ import { API_URL } from '../../config';
 import { Save, Loader2, Info } from 'lucide-react';
 import { BLOG_PROMPT_SETTING_KEY, DEFAULT_BLOG_PROMPT } from '../../data/blogPrompt';
 import { IMAGE_PROMPT_SETTING_KEY, DEFAULT_IMAGE_PROMPT } from '../../data/imagePrompt';
+import {
+  AI_CHAT_MODEL_OPTIONS,
+  AI_CHAT_MODEL_SETTING_KEY,
+  DEFAULT_AI_CHAT_MODEL
+} from '../../data/aiModels';
 
 const DEFAULT_CASE_PROMPT =
   'Оптимизируй следующий текст для юридического портфолио, сделай его профессиональным, лаконичным и грамотным:\n\n{text}';
 
 const SettingsAdmin = () => {
+  const [chatModel, setChatModel] = useState(DEFAULT_AI_CHAT_MODEL);
+  const [customModel, setCustomModel] = useState('');
+  const [useCustomModel, setUseCustomModel] = useState(false);
   const [casePrompt, setCasePrompt] = useState('');
   const [blogPrompt, setBlogPrompt] = useState('');
   const [imagePrompt, setImagePrompt] = useState('');
@@ -21,11 +29,30 @@ const SettingsAdmin = () => {
 
   const fetchSettings = async () => {
     try {
-      const [caseRes, blogRes, imageRes] = await Promise.all([
+      const [modelRes, caseRes, blogRes, imageRes] = await Promise.all([
+        fetch(`${API_URL}/settings/${AI_CHAT_MODEL_SETTING_KEY}`, { credentials: 'include' }),
         fetch(`${API_URL}/settings/ai_prompt_template`, { credentials: 'include' }),
         fetch(`${API_URL}/settings/${BLOG_PROMPT_SETTING_KEY}`, { credentials: 'include' }),
         fetch(`${API_URL}/settings/${IMAGE_PROMPT_SETTING_KEY}`, { credentials: 'include' }),
       ]);
+
+      if (modelRes.ok) {
+        const data = await modelRes.json();
+        const value = (data.value || DEFAULT_AI_CHAT_MODEL).trim();
+        const known = AI_CHAT_MODEL_OPTIONS.some((item) => item.id === value);
+        if (known) {
+          setChatModel(value);
+          setUseCustomModel(false);
+          setCustomModel('');
+        } else {
+          setUseCustomModel(true);
+          setCustomModel(value);
+          setChatModel(DEFAULT_AI_CHAT_MODEL);
+        }
+      } else {
+        setChatModel(DEFAULT_AI_CHAT_MODEL);
+        setUseCustomModel(false);
+      }
 
       if (caseRes.ok) {
         const data = await caseRes.json();
@@ -49,6 +76,7 @@ const SettingsAdmin = () => {
       }
     } catch (error) {
       console.error('Failed to fetch settings:', error);
+      setChatModel(DEFAULT_AI_CHAT_MODEL);
       setCasePrompt(DEFAULT_CASE_PROMPT);
       setBlogPrompt(DEFAULT_BLOG_PROMPT);
       setImagePrompt(DEFAULT_IMAGE_PROMPT);
@@ -57,13 +85,29 @@ const SettingsAdmin = () => {
     }
   };
 
+  const resolvedChatModel = useCustomModel
+    ? customModel.trim()
+    : chatModel.trim();
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
     setMessage(null);
 
+    if (!resolvedChatModel) {
+      setMessage({ text: 'Укажите модель ИИ', type: 'error' });
+      setIsSaving(false);
+      return;
+    }
+
     try {
-      const [caseRes, blogRes, imageRes] = await Promise.all([
+      const [modelRes, caseRes, blogRes, imageRes] = await Promise.all([
+        fetch(`${API_URL}/settings/${AI_CHAT_MODEL_SETTING_KEY}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ value: resolvedChatModel }),
+          credentials: 'include',
+        }),
         fetch(`${API_URL}/settings/ai_prompt_template`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -84,8 +128,8 @@ const SettingsAdmin = () => {
         }),
       ]);
 
-      if (caseRes.ok && blogRes.ok && imageRes.ok) {
-        setMessage({ text: 'Настройки успешно сохранены', type: 'success' });
+      if (modelRes.ok && caseRes.ok && blogRes.ok && imageRes.ok) {
+        setMessage({ text: `Настройки сохранены. Модель: ${resolvedChatModel}`, type: 'success' });
       } else {
         throw new Error('Ошибка сохранения');
       }
@@ -109,6 +153,64 @@ const SettingsAdmin = () => {
       <h2 className="text-xl font-bold text-slate-800 mb-6">Настройки интеграции ИИ</h2>
       
       <form onSubmit={handleSave} className="space-y-8">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-2">
+            Модель ИИ (текст)
+          </label>
+          <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-4 flex gap-3 text-sm text-blue-800">
+            <Info className="w-5 h-5 flex-shrink-0 text-blue-500" />
+            <div className="space-y-1">
+              <p>
+                Используется для статей блога, рерайта, описания обложки и оптимизации дел через RouterAI.
+              </p>
+              <p className="font-mono text-xs">Сейчас: {resolvedChatModel || '—'}</p>
+            </div>
+          </div>
+
+          <select
+            value={useCustomModel ? '__custom__' : chatModel}
+            onChange={(e) => {
+              if (e.target.value === '__custom__') {
+                setUseCustomModel(true);
+                if (!customModel) setCustomModel(chatModel);
+              } else {
+                setUseCustomModel(false);
+                setChatModel(e.target.value);
+              }
+            }}
+            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none bg-white"
+          >
+            {AI_CHAT_MODEL_OPTIONS.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.label} ({item.id})
+              </option>
+            ))}
+            <option value="__custom__">Другая модель (вручную)…</option>
+          </select>
+
+          {useCustomModel && (
+            <input
+              type="text"
+              value={customModel}
+              onChange={(e) => setCustomModel(e.target.value)}
+              placeholder="например openai/gpt-4o-mini"
+              className="mt-3 w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none font-mono text-sm"
+            />
+          )}
+
+          <button
+            type="button"
+            onClick={() => {
+              setUseCustomModel(false);
+              setChatModel(DEFAULT_AI_CHAT_MODEL);
+              setCustomModel('');
+            }}
+            className="mt-2 text-sm text-slate-500 hover:text-amber-600 transition-colors"
+          >
+            Сбросить на openai/gpt-4o-mini
+          </button>
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-2">
             Промпт для оптимизации текстов дел
