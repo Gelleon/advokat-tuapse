@@ -1,4 +1,4 @@
-import { SITE_NAME, SITE_URL } from '../config';
+import { SITE_NAME, SITE_URL, absoluteUrl } from '../config';
 
 const BUSINESS = {
   phone: '+7-918-048-61-12',
@@ -14,10 +14,10 @@ export function legalServiceSchema() {
     '@context': 'https://schema.org',
     '@type': 'LegalService',
     name: SITE_NAME,
-    url: SITE_URL,
+    url: absoluteUrl('/'),
     telephone: BUSINESS.phone,
     email: BUSINESS.email,
-    image: `${SITE_URL}/og-image.jpg`,
+    image: absoluteUrl('/og-image.jpg'),
     address: {
       '@type': 'PostalAddress',
       streetAddress: BUSINESS.streetAddress,
@@ -52,7 +52,7 @@ export function webSiteSchema() {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: SITE_NAME,
-    url: SITE_URL,
+    url: absoluteUrl('/'),
     inLanguage: 'ru-RU',
   };
 }
@@ -83,8 +83,8 @@ export function articleSchema(post: {
   const image = post.thumbnailUrl
     ? post.thumbnailUrl.startsWith('http')
       ? post.thumbnailUrl
-      : `${SITE_URL}${post.thumbnailUrl}`
-    : `${SITE_URL}/og-image.jpg`;
+      : absoluteUrl(post.thumbnailUrl)
+    : absoluteUrl('/og-image.jpg');
 
   const articleBody = stripHtml(post.content).slice(0, 5000);
   const keywords = (post.tags || [])
@@ -106,20 +106,20 @@ export function articleSchema(post: {
     author: {
       '@type': 'Organization',
       name: post.author || SITE_NAME,
-      url: SITE_URL,
+      url: absoluteUrl('/'),
     },
     publisher: {
       '@type': 'Organization',
       name: SITE_NAME,
-      url: SITE_URL,
+      url: absoluteUrl('/'),
       logo: {
         '@type': 'ImageObject',
-        url: `${SITE_URL}/scales.svg`,
+        url: absoluteUrl('/scales.svg'),
       },
     },
     mainEntityOfPage: {
       '@type': 'WebPage',
-      '@id': `${SITE_URL}/blog/${post.slug}`,
+      '@id': absoluteUrl(`/blog/${post.slug}`),
     },
     isAccessibleForFree: true,
   };
@@ -133,7 +133,9 @@ export function breadcrumbSchema(items: { name: string; path: string }[]) {
       '@type': 'ListItem',
       position: index + 1,
       name: item.name,
-      item: `${SITE_URL}${item.path}`,
+      item: item.path.includes('#')
+        ? `${SITE_URL}${item.path.startsWith('/') ? item.path : `/${item.path}`}`
+        : absoluteUrl(item.path || '/'),
     })),
   };
 }
@@ -163,12 +165,12 @@ export function serviceSchema(options: {
     ...base,
     name: options.name,
     description: options.description,
-    url: `${SITE_URL}${options.path.startsWith('/') ? options.path : `/${options.path}`}`,
+    url: absoluteUrl(options.path),
     serviceType: options.name,
     provider: {
       '@type': 'LegalService',
       name: SITE_NAME,
-      url: SITE_URL,
+      url: absoluteUrl('/'),
       telephone: BUSINESS.phone,
       address: base.address,
     },

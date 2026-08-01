@@ -1,10 +1,10 @@
 import { Helmet } from 'react-helmet-async';
 import {
   SITE_NAME,
-  SITE_URL,
   DEFAULT_OG_IMAGE,
   GOOGLE_SITE_VERIFICATION,
   YANDEX_VERIFICATION,
+  absoluteUrl,
 } from '../config';
 
 interface SeoProps {
@@ -23,7 +23,7 @@ interface SeoProps {
 const Seo = ({
   title,
   description,
-  path = '',
+  path = '/',
   image,
   type = 'website',
   noindex = false,
@@ -32,12 +32,16 @@ const Seo = ({
   modifiedTime,
   jsonLd,
 }: SeoProps) => {
-  const url = `${SITE_URL}${path}`;
-  const ogImage = image || DEFAULT_OG_IMAGE;
+  const url = absoluteUrl(path || '/');
+  const ogImage = image
+    ? image.startsWith('http')
+      ? image
+      : absoluteUrl(image)
+    : DEFAULT_OG_IMAGE;
   const schemas = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
 
   return (
-    <Helmet>
+    <Helmet prioritizeSeoTags>
       <html lang="ru" />
       <title>{title}</title>
       <meta name="description" content={description} />

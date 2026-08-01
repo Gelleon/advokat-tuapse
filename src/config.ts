@@ -1,4 +1,8 @@
-export const SITE_URL = import.meta.env.VITE_SITE_URL || 'https://advokat-tuapse.ru';
+/** Apex origin without trailing slash. Homepage canonical is `${SITE_URL}/`. */
+export const SITE_URL = (import.meta.env.VITE_SITE_URL || 'https://advokat-tuapse.ru').replace(
+  /\/+$/,
+  ''
+);
 export const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 export const API_URL = BASE_URL ? `${BASE_URL}/api` : '/api';
 
@@ -13,9 +17,14 @@ export const MAX_PROFILE_URL =
   import.meta.env.VITE_MAX_PROFILE_URL ||
   'https://max.ru/u/f9LHodD0cOKD2DUhNjnjbGeZUe97nwtOdSE5RB7jO3bidOC2JW1NOVq3rwY';
 
-export function absoluteUrl(path: string): string {
+/** Absolute canonical URL. Homepage always ends with `/`; other paths have no trailing slash. */
+export function absoluteUrl(path: string = '/'): string {
   if (path.startsWith('http://') || path.startsWith('https://')) {
     return path;
   }
-  return `${SITE_URL}${path.startsWith('/') ? path : `/${path}`}`;
+  const normalized = !path || path === '/' ? '/' : `/${path.replace(/^\/+|\/+$/g, '')}`;
+  if (normalized === '/') {
+    return `${SITE_URL}/`;
+  }
+  return `${SITE_URL}${normalized}`;
 }
