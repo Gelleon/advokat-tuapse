@@ -70,8 +70,11 @@ function generateServicesYml(baseUrl, options = {}) {
     const setId = `s${index + 1}`;
     const offerId = `offer-${index + 1}`;
     const offerUrl = pageUrl(siteUrl, page.path);
-    const telLink = `tel:${executor.phone}`;
-    const orderLink = `${siteUrl}/#contact`;
+    // Yandex requires http(s) URL here — tel: is rejected as invalid type.
+    const phonePageUrl = `${siteUrl}/`;
+    const orderLink = `${siteUrl}/`;
+    // Same image, unique URL per offer (Yandex forbids identical picture links).
+    const offerPictureUrl = `${pictureUrl}?offer=${offerId}`;
 
     xml += `      <offer id="${offerId}">\n`;
     xml += `        <name>${escapeXml(executor.name)}</name>\n`;
@@ -80,14 +83,14 @@ function generateServicesYml(baseUrl, options = {}) {
     xml += '        <currencyId>RUR</currencyId>\n';
     xml += `        <categoryId>${LAWYER_CATEGORY_ID}</categoryId>\n`;
     xml += `        <set-ids>${setId}</set-ids>\n`;
-    xml += `        <picture>${escapeXml(pictureUrl)}</picture>\n`;
+    xml += `        <picture>${escapeXml(offerPictureUrl)}</picture>\n`;
     xml += `        <description>${escapeXml(`${page.title}. ${page.description}`)}</description>\n`;
     xml += `        <param name="Рейтинг">${executor.rating}</param>\n`;
     xml += `        <param name="Число отзывов">${executor.reviewCount}</param>\n`;
     xml += `        <param name="Годы опыта">${executor.yearsExperience}</param>\n`;
     xml += `        <param name="Регион">${escapeXml(executor.region)}</param>\n`;
     xml += `        <param name="Конверсия">${executor.conversion}</param>\n`;
-    xml += `        <param name="Ссылка на телефон">${escapeXml(telLink)}</param>\n`;
+    xml += `        <param name="Ссылка на телефон">${escapeXml(phonePageUrl)}</param>\n`;
     xml += `        <param name="Ссылка на создание заказа">${escapeXml(orderLink)}</param>\n`;
     xml += `        <param name="Ссылка на профиль исполнителя">${escapeXml(`${siteUrl}/`)}</param>\n`;
     xml += `        <param name="Организация">true</param>\n`;
