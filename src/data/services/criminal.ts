@@ -7,7 +7,7 @@ export const criminalServices: ServicePageContent[] = [
     path: AREA,
     areaSlug: AREA,
     title: 'Уголовные дела',
-    shortTitle: 'Адвокат по уголовным делам в Туапсе',
+    shortTitle: 'Уголовные дела',
     metaTitle: 'Адвокат по уголовным делам в Туапсе — защита на всех стадиях',
     metaDescription:
       'Уголовный адвокат: защита на следствии и в суде, обжалование действий правоохранительных органов, защита потерпевших.',
