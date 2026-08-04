@@ -1,8 +1,9 @@
 export const AI_CHAT_MODEL_SETTING_KEY = 'ai_chat_model';
+export const AI_IMAGE_MODEL_SETTING_KEY = 'ai_image_model';
 
 export const DEFAULT_AI_CHAT_MODEL = 'openai/gpt-4o-mini';
+export const DEFAULT_AI_IMAGE_MODEL = 'recraft/recraft-v4.1-utility';
 
-/** Популярные модели RouterAI для выбора в админке */
 export const AI_CHAT_MODEL_OPTIONS = [
   { id: 'openai/gpt-4o-mini', label: 'OpenAI GPT-4o Mini' },
   { id: 'openai/gpt-4o', label: 'OpenAI GPT-4o' },
@@ -16,4 +17,12 @@ export const AI_CHAT_MODEL_OPTIONS = [
   { id: 'deepseek/deepseek-chat', label: 'DeepSeek Chat' },
   { id: 'deepseek/deepseek-r1', label: 'DeepSeek R1' },
   { id: 'qwen/qwen-2.5-72b-instruct', label: 'Qwen 2.5 72B' }
+] as const;
+
+export const AI_IMAGE_MODEL_OPTIONS = [
+  { id: 'recraft/recraft-v4.1-utility', label: 'Recraft V4.1 Utility (рекомендуется)' },
+  { id: 'recraft/recraft-v4.1', label: 'Recraft V4.1' },
+  { id: 'recraft/recraft-v4', label: 'Recraft V4' },
+  { id: 'recraft/recraft-v3', label: 'Recraft V3' },
+  { id: 'recraft/recraft-v2', label: 'Recraft V2' }
 ] as const;

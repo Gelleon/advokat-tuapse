@@ -7,14 +7,11 @@ import {
   buildArticleExcerpt,
   renderImagePrompt
 } from '../data/imagePrompt';
-import { getChatModel } from './aiModel';
+import { getChatModel, getImageModel } from './aiModel';
+import { getImageSizesForModel } from '../data/aiModels';
 
 const prisma = new PrismaClient();
 
-const IMAGE_MODEL = 'recraft/recraft-v4.1-utility';
-/** Landscape 16:9 — supported by Recraft V4.1 Utility */
-const IMAGE_SIZE = '1344x768';
-const IMAGE_SIZE_FALLBACK = '1024x1024';
 const SCENE_BRIEF_TIMEOUT_MS = 20_000;
 const IMAGE_TIMEOUT_MS = 180_000;
 const UPLOAD_DIR = path.join(__dirname, '../../uploads/blog');
@@ -183,6 +180,7 @@ export type CoverImageResult = {
 async function requestCoverImage(
   apiKey: string,
   prompt: string,
+  model: string,
   size: string,
   timeoutMs: number
 ): Promise<{ item?: { b64_json?: string; url?: string; media_type?: string }; error?: string }> {
@@ -197,7 +195,7 @@ async function requestCoverImage(
         Authorization: `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: IMAGE_MODEL,
+        model,
         prompt: truncatePrompt(prompt),
         n: 1,
         size,
@@ -307,18 +305,23 @@ export async function generateBlogCoverImage(vars: {
     ].join('\n\n');
   }
 
-  const attempts: Array<{ size: string; timeoutMs: number }> = [
-    { size: IMAGE_SIZE, timeoutMs: IMAGE_TIMEOUT_MS },
-    { size: IMAGE_SIZE_FALLBACK, timeoutMs: IMAGE_TIMEOUT_MS }
-  ];
+  const attempts: Array<{ size: string; timeoutMs: number }> = [];
+  const imageModel = await getImageModel();
+  const sizes = getImageSizesForModel(imageModel);
+  attempts.push({ size: sizes.primary, timeoutMs: IMAGE_TIMEOUT_MS });
+  if (sizes.fallback !== sizes.primary) {
+    attempts.push({ size: sizes.fallback, timeoutMs: IMAGE_TIMEOUT_MS });
+  }
 
   let lastError = 'Ошибка генерации изображения';
 
+  console.log('Cover image model:', imageModel);
+
   for (let i = 0; i < attempts.length; i += 1) {
     const attempt = attempts[i];
-    console.log(`Cover image attempt ${i + 1}/${attempts.length}, size=${attempt.size}`);
+    console.log(`Cover image attempt ${i + 1}/${attempts.length}, model=${imageModel}, size=${attempt.size}`);
 
-    const result = await requestCoverImage(apiKey, prompt, attempt.size, attempt.timeoutMs);
+    const result = await requestCoverImage(apiKey, prompt, imageModel, attempt.size, attempt.timeoutMs);
     if (result.item) {
       return saveCoverItem(result.item);
     }
