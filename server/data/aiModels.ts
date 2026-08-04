@@ -21,23 +21,88 @@ export const AI_CHAT_MODEL_OPTIONS = [
   { id: 'qwen/qwen-2.5-72b-instruct', label: 'Qwen 2.5 72B' }
 ] as const;
 
-/** Модели генерации изображений через RouterAI (Recraft) */
+/** Модели генерации изображений через RouterAI */
 export const AI_IMAGE_MODEL_OPTIONS = [
   { id: 'recraft/recraft-v4.1-utility', label: 'Recraft V4.1 Utility (рекомендуется)' },
+  { id: 'krea/krea-2-medium-turbo', label: 'Krea 2 Medium Turbo' },
   { id: 'recraft/recraft-v4.1', label: 'Recraft V4.1' },
   { id: 'recraft/recraft-v4', label: 'Recraft V4' },
   { id: 'recraft/recraft-v3', label: 'Recraft V3' },
   { id: 'recraft/recraft-v2', label: 'Recraft V2' }
 ] as const;
 
-/** Размеры кадра под модель (Recraft V4.x поддерживает 1344x768 для 16:9) */
-export function getImageSizesForModel(model: string): { primary: string; fallback: string } {
+export type ImageGenerationAttempt = {
+  /** Подпись для логов */
+  label: string;
+  /** RouterAI: /api/v1/images (Krea и др.) или /api/v1/images/generations (Recraft) */
+  endpoint: 'images' | 'generations';
+  aspectRatio?: string;
+  size?: string;
+  resolution?: string;
+};
+
+function isKreaImageModel(model: string): boolean {
+  return model.toLowerCase().includes('krea');
+}
+
+/** Параметры запроса под модель — горизонтальная обложка 16:9 */
+export function getImageAttemptsForModel(model: string): ImageGenerationAttempt[] {
   const id = model.toLowerCase();
+
+  // Krea: aspect_ratio обязателен, иначе по умолчанию портрет 9:16
+  // https://routerai.ru/models/krea/krea-2-medium-turbo
+  if (isKreaImageModel(model)) {
+    return [
+      {
+        label: 'aspect_ratio=16:9',
+        endpoint: 'images',
+        aspectRatio: '16:9'
+      }
+    ];
+  }
+
   if (id.includes('recraft-v4') || id.includes('recraft-v4.1')) {
-    return { primary: '1344x768', fallback: '1024x1024' };
+    return [
+      {
+        label: 'size=1344x768, aspect_ratio=16:9',
+        endpoint: 'generations',
+        size: '1344x768',
+        aspectRatio: '16:9'
+      },
+      {
+        label: 'size=1024x1024',
+        endpoint: 'generations',
+        size: '1024x1024'
+      }
+    ];
   }
+
   if (id.includes('recraft-v3') || id.includes('recraft-v2')) {
-    return { primary: '1536x1024', fallback: '1024x1024' };
+    return [
+      {
+        label: 'size=1536x1024, aspect_ratio=16:9',
+        endpoint: 'generations',
+        size: '1536x1024',
+        aspectRatio: '16:9'
+      },
+      {
+        label: 'size=1024x1024',
+        endpoint: 'generations',
+        size: '1024x1024'
+      }
+    ];
   }
-  return { primary: '1024x1024', fallback: '1024x1024' };
+
+  return [
+    {
+      label: 'aspect_ratio=16:9',
+      endpoint: 'images',
+      aspectRatio: '16:9'
+    },
+    {
+      label: 'size=1024x1024',
+      endpoint: 'generations',
+      size: '1024x1024'
+    }
+  ];
 }

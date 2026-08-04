@@ -264,7 +264,8 @@ const SettingsAdmin = () => {
             <Info className="w-5 h-5 flex-shrink-0 text-blue-500" />
             <div className="space-y-1">
               <p>
-                Генерация изображения через RouterAI (Recraft). Текстовая модель выше используется только для описания сцены ({`{sceneBrief}`}).
+                Генерация изображения через RouterAI. Для Krea обязательно передаётся aspect_ratio 16:9 (иначе будет портрет 9:16).
+                Текстовая модель выше используется только для описания сцены ({`{sceneBrief}`}).
               </p>
               <p className="font-mono text-xs">Сейчас: {resolvedImageModel || '—'}</p>
             </div>

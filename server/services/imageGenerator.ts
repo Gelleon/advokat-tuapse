@@ -8,7 +8,7 @@ import {
   renderImagePrompt
 } from '../data/imagePrompt';
 import { getChatModel, getImageModel } from './aiModel';
-import { getImageSizesForModel } from '../data/aiModels';
+import { getImageAttemptsForModel, type ImageGenerationAttempt } from '../data/aiModels';
 
 const prisma = new PrismaClient();
 
@@ -181,32 +181,40 @@ async function requestCoverImage(
   apiKey: string,
   prompt: string,
   model: string,
-  size: string,
+  attempt: ImageGenerationAttempt,
   timeoutMs: number
 ): Promise<{ item?: { b64_json?: string; url?: string; media_type?: string }; error?: string }> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
+  const body: Record<string, unknown> = {
+    model,
+    prompt: truncatePrompt(prompt),
+    n: 1,
+    response_format: 'b64_json'
+  };
+  if (attempt.aspectRatio) body.aspect_ratio = attempt.aspectRatio;
+  if (attempt.size) body.size = attempt.size;
+  if (attempt.resolution) body.resolution = attempt.resolution;
+
+  const url = attempt.endpoint === 'images'
+    ? 'https://routerai.ru/api/v1/images'
+    : 'https://routerai.ru/api/v1/images/generations';
+
   try {
-    const response = await fetch('https://routerai.ru/api/v1/images/generations', {
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`
       },
-      body: JSON.stringify({
-        model,
-        prompt: truncatePrompt(prompt),
-        n: 1,
-        size,
-        response_format: 'b64_json'
-      }),
+      body: JSON.stringify(body),
       signal: controller.signal
     });
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error('Image generation API error:', response.status, size, errText.slice(0, 500));
+      console.error('Image generation API error:', response.status, attempt.label, errText.slice(0, 500));
       return {
         error: `Ошибка API изображений (${response.status}): ${errText.slice(0, 180)}`
       };
@@ -305,30 +313,28 @@ export async function generateBlogCoverImage(vars: {
     ].join('\n\n');
   }
 
-  const attempts: Array<{ size: string; timeoutMs: number }> = [];
   const imageModel = await getImageModel();
-  const sizes = getImageSizesForModel(imageModel);
-  attempts.push({ size: sizes.primary, timeoutMs: IMAGE_TIMEOUT_MS });
-  if (sizes.fallback !== sizes.primary) {
-    attempts.push({ size: sizes.fallback, timeoutMs: IMAGE_TIMEOUT_MS });
-  }
+  const generationAttempts = getImageAttemptsForModel(imageModel).map((attempt) => ({
+    ...attempt,
+    timeoutMs: IMAGE_TIMEOUT_MS
+  }));
 
   let lastError = 'Ошибка генерации изображения';
 
   console.log('Cover image model:', imageModel);
 
-  for (let i = 0; i < attempts.length; i += 1) {
-    const attempt = attempts[i];
-    console.log(`Cover image attempt ${i + 1}/${attempts.length}, model=${imageModel}, size=${attempt.size}`);
+  for (let i = 0; i < generationAttempts.length; i += 1) {
+    const attempt = generationAttempts[i];
+    console.log(`Cover image attempt ${i + 1}/${generationAttempts.length}, model=${imageModel}, ${attempt.label}`);
 
-    const result = await requestCoverImage(apiKey, prompt, imageModel, attempt.size, attempt.timeoutMs);
+    const result = await requestCoverImage(apiKey, prompt, imageModel, attempt, attempt.timeoutMs);
     if (result.item) {
       return saveCoverItem(result.item);
     }
 
     lastError = result.error || lastError;
     const retriable = /ожидан|terminated|abort|timeout|502|503|504|429/i.test(lastError);
-    if (!retriable || i === attempts.length - 1) {
+    if (!retriable || i === generationAttempts.length - 1) {
       break;
     }
     console.warn('Cover image retry after error:', lastError);

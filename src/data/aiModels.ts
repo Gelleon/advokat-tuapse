@@ -21,6 +21,7 @@ export const AI_CHAT_MODEL_OPTIONS = [
 
 export const AI_IMAGE_MODEL_OPTIONS = [
   { id: 'recraft/recraft-v4.1-utility', label: 'Recraft V4.1 Utility (рекомендуется)' },
+  { id: 'krea/krea-2-medium-turbo', label: 'Krea 2 Medium Turbo' },
   { id: 'recraft/recraft-v4.1', label: 'Recraft V4.1' },
   { id: 'recraft/recraft-v4', label: 'Recraft V4' },
   { id: 'recraft/recraft-v3', label: 'Recraft V3' },
