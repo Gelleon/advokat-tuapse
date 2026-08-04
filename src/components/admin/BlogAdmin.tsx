@@ -171,8 +171,11 @@ const BlogAdmin = () => {
           type: 'success'
         });
       } else {
+        const coverHint = data.imageError?.includes('ожидан') || /terminated|abort|timeout/i.test(data.imageError || '')
+          ? 'Генерация обложки прервалась по таймауту RouterAI — нажмите «Сгенерировать обложку» (обычно со второго раза проходит быстрее).'
+          : (data.imageError || 'Можно нажать «Сгенерировать обложку» или загрузить фото вручную.');
         setAgentMessage({
-          text: `Черновик создан без обложки. ${data.imageError || 'Можно нажать «Сгенерировать обложку» или загрузить фото вручную.'} Источник (${sourceName}): ${data.source?.complexName || data.source?.eoNumber}.`,
+          text: `Черновик создан без обложки. ${coverHint} Источник (${sourceName}): ${data.source?.complexName || data.source?.eoNumber}.`,
           type: 'error'
         });
       }

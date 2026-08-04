@@ -14,7 +14,36 @@ const prisma = new PrismaClient();
 const IMAGE_MODEL = 'recraft/recraft-v4.1-utility';
 /** Landscape 16:9 — supported by Recraft V4.1 Utility */
 const IMAGE_SIZE = '1344x768';
+const IMAGE_SIZE_FALLBACK = '1024x1024';
+const SCENE_BRIEF_TIMEOUT_MS = 20_000;
+const IMAGE_TIMEOUT_MS = 180_000;
 const UPLOAD_DIR = path.join(__dirname, '../../uploads/blog');
+
+function isFetchAborted(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const e = error as { name?: string; message?: string; code?: string };
+  return (
+    e.name === 'AbortError'
+    || e.code === 'ABORT_ERR'
+    || /abort|terminated|timeout/i.test(String(e.message || ''))
+  );
+}
+
+function formatImageError(error: unknown): string {
+  if (isFetchAborted(error)) {
+    return 'Превышено время ожидания генерации обложки (RouterAI). Нажмите «Сгенерировать обложку» ещё раз.';
+  }
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  return 'Ошибка генерации изображения';
+}
+
+function truncatePrompt(prompt: string, maxLen = 6000): string {
+  const trimmed = prompt.trim();
+  if (trimmed.length <= maxLen) return trimmed;
+  return `${trimmed.slice(0, maxLen - 1)}…`;
+}
 
 function getApiKey(): string {
   return (process.env.ROUTERAI_API_KEY || '').trim().replace(/^['"]|['"]$/g, '');
@@ -84,7 +113,7 @@ async function buildSceneBrief(input: {
   const excerpt = input.articleExcerpt || input.previewText || input.title;
   const model = await getChatModel();
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 45000);
+  const timeoutId = setTimeout(() => controller.abort(), SCENE_BRIEF_TIMEOUT_MS);
 
   try {
     const response = await fetch('https://routerai.ru/api/v1/chat/completions', {
@@ -151,6 +180,85 @@ export type CoverImageResult = {
   error?: string;
 };
 
+async function requestCoverImage(
+  apiKey: string,
+  prompt: string,
+  size: string,
+  timeoutMs: number
+): Promise<{ item?: { b64_json?: string; url?: string; media_type?: string }; error?: string }> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch('https://routerai.ru/api/v1/images/generations', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: IMAGE_MODEL,
+        prompt: truncatePrompt(prompt),
+        n: 1,
+        size,
+        response_format: 'b64_json'
+      }),
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error('Image generation API error:', response.status, size, errText.slice(0, 500));
+      return {
+        error: `Ошибка API изображений (${response.status}): ${errText.slice(0, 180)}`
+      };
+    }
+
+    const data = await response.json();
+    const item = data?.data?.[0];
+    if (!item) {
+      return { error: 'API изображений вернул пустой ответ' };
+    }
+    return { item };
+  } catch (error) {
+    if (isFetchAborted(error)) {
+      return { error: formatImageError(error) };
+    }
+    console.error('Image generation request failed:', error);
+    return { error: formatImageError(error) };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function saveCoverItem(item: { b64_json?: string; url?: string; media_type?: string }): Promise<CoverImageResult> {
+  ensureUploadDir();
+  const ext = extensionFromMediaType(item.media_type);
+  const filename = `ai-cover-${Date.now()}-${Math.round(Math.random() * 1e9)}.${ext}`;
+  const filepath = path.join(UPLOAD_DIR, filename);
+
+  if (item.b64_json) {
+    fs.writeFileSync(filepath, decodeImagePayload(item.b64_json));
+  } else if (item.url) {
+    const imageRes = await fetch(item.url);
+    if (!imageRes.ok) {
+      return { url: null, error: 'Не удалось скачать сгенерированное изображение' };
+    }
+    const arrayBuffer = await imageRes.arrayBuffer();
+    fs.writeFileSync(filepath, Buffer.from(arrayBuffer));
+  } else {
+    return { url: null, error: 'В ответе API нет b64_json и url' };
+  }
+
+  const stat = fs.statSync(filepath);
+  if (!stat.size) {
+    return { url: null, error: 'Файл обложки сохранился пустым' };
+  }
+
+  console.log('Cover image saved:', filepath, 'bytes', stat.size);
+  return { url: `/uploads/blog/${filename}` };
+}
+
 export async function generateBlogCoverImage(vars: {
   title: string;
   previewText: string;
@@ -199,73 +307,29 @@ export async function generateBlogCoverImage(vars: {
     ].join('\n\n');
   }
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 120000);
+  const attempts: Array<{ size: string; timeoutMs: number }> = [
+    { size: IMAGE_SIZE, timeoutMs: IMAGE_TIMEOUT_MS },
+    { size: IMAGE_SIZE_FALLBACK, timeoutMs: IMAGE_TIMEOUT_MS }
+  ];
 
-  try {
-    const response = await fetch('https://routerai.ru/api/v1/images/generations', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: IMAGE_MODEL,
-        prompt,
-        n: 1,
-        size: IMAGE_SIZE,
-        response_format: 'b64_json'
-      }),
-      signal: controller.signal
-    });
+  let lastError = 'Ошибка генерации изображения';
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error('Image generation API error:', response.status, errText.slice(0, 500));
-      return {
-        url: null,
-        error: `Ошибка API изображений (${response.status}): ${errText.slice(0, 180)}`
-      };
+  for (let i = 0; i < attempts.length; i += 1) {
+    const attempt = attempts[i];
+    console.log(`Cover image attempt ${i + 1}/${attempts.length}, size=${attempt.size}`);
+
+    const result = await requestCoverImage(apiKey, prompt, attempt.size, attempt.timeoutMs);
+    if (result.item) {
+      return saveCoverItem(result.item);
     }
 
-    const data = await response.json();
-    const item = data?.data?.[0];
-    if (!item) {
-      return { url: null, error: 'API изображений вернул пустой ответ' };
+    lastError = result.error || lastError;
+    const retriable = /ожидан|terminated|abort|timeout|502|503|504|429/i.test(lastError);
+    if (!retriable || i === attempts.length - 1) {
+      break;
     }
-
-    ensureUploadDir();
-    const ext = extensionFromMediaType(item.media_type);
-    const filename = `ai-cover-${Date.now()}-${Math.round(Math.random() * 1e9)}.${ext}`;
-    const filepath = path.join(UPLOAD_DIR, filename);
-
-    if (item.b64_json) {
-      fs.writeFileSync(filepath, decodeImagePayload(item.b64_json));
-    } else if (item.url) {
-      const imageRes = await fetch(item.url);
-      if (!imageRes.ok) {
-        return { url: null, error: 'Не удалось скачать сгенерированное изображение' };
-      }
-      const arrayBuffer = await imageRes.arrayBuffer();
-      fs.writeFileSync(filepath, Buffer.from(arrayBuffer));
-    } else {
-      return { url: null, error: 'В ответе API нет b64_json и url' };
-    }
-
-    const stat = fs.statSync(filepath);
-    if (!stat.size) {
-      return { url: null, error: 'Файл обложки сохранился пустым' };
-    }
-
-    console.log('Cover image saved:', filepath, 'bytes', stat.size);
-    return { url: `/uploads/blog/${filename}` };
-  } catch (error: any) {
-    if (error?.name === 'AbortError') {
-      return { url: null, error: 'Превышено время ожидания генерации изображения' };
-    }
-    console.error('Image generation failed:', error);
-    return { url: null, error: error?.message || 'Ошибка генерации изображения' };
-  } finally {
-    clearTimeout(timeoutId);
+    console.warn('Cover image retry after error:', lastError);
   }
+
+  return { url: null, error: lastError };
 }
