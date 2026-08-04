@@ -93,14 +93,14 @@ export function articleSchema(post: {
 
   return {
     '@context': 'https://schema.org',
-    '@type': 'NewsArticle',
+    '@type': 'Article',
     headline: post.title,
     description: post.previewText || post.metaDescription,
     image,
     datePublished: published,
     dateModified: post.updatedAt || published,
     inLanguage: 'ru-RU',
-    articleSection: 'Правовые новости',
+    articleSection: 'Правовые материалы',
     keywords: keywords || undefined,
     articleBody: articleBody || undefined,
     author: {

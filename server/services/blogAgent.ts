@@ -301,7 +301,7 @@ async function callRouterAI(prompt: string): Promise<string> {
         messages: [
           {
             role: 'system',
-            content: 'Ты редактор правового новостного блога. Пиши ясно, по делу, в стиле деловых СМИ. Всегда отвечай только валидным JSON-объектом без markdown-обёртки, комментариев и любого текста вне JSON. Никогда не оставляй поля title и content пустыми или null — если по документу невозможно написать полноценную статью, всё равно сгенерируй осмысленный title и развёрнутый content хотя бы из реквизитов документа и общей практики направления.'
+            content: 'Ты редактор экспертного правового блога адвокатского бюро «Адвокаты Туапсе». Пишешь разборы официальных документов простым языком — это не новости. Всегда отвечай только валидным JSON-объектом без markdown-обёртки, комментариев и любого текста вне JSON. Никогда не оставляй поля title и content пустыми или null — если по документу мало данных, всё равно сгенерируй осмысленный title и развёрнутый content по шаблону (lead, 4 раздела h2, aside).'
           },
           { role: 'user', content: prompt }
         ]
@@ -358,9 +358,48 @@ function ensureMetaDescription(metaDescription: string, previewText: string, tit
 function buildPostTags(practiceAreaTitle: string, aiTags: string[] = []): string[] {
   return sanitizeTags([
     practiceAreaTitle,
-    'Изменения законодательства',
     ...aiTags
   ]).slice(0, 8);
+}
+
+function ensureLeadParagraph(content: string): string {
+  if (content.includes('class="lead"')) return content;
+  return content.replace(/<p(\s[^>]*)?>/, '<p class="lead"$1>');
+}
+
+function ensureDisclaimer(content: string): string {
+  if (content.toLowerCase().includes('информацион')) return content;
+  return `${content}<p class="article-disclaimer">Материал носит информационный характер и не является индивидуальной юридической консультацией.</p>`;
+}
+
+function appendSourceLink(content: string, sourceUrl: string, sourceTitle: string, sourceLabel: string): string {
+  if (!sourceUrl || content.includes(sourceUrl)) return content;
+  return `${content}<p class="article-source">${sourceLabel}: <a href="${sourceUrl}" target="_blank" rel="noopener noreferrer">${sourceTitle}</a></p>`;
+}
+
+function extractArticleSourceBlock(content: string): string | null {
+  const match = content.match(/<p class="article-source">[\s\S]*?<\/p>/i);
+  return match ? match[0] : null;
+}
+
+function finalizeArticleContent(
+  content: string,
+  options?: { sourceUrl?: string; sourceTitle?: string; sourceLabel?: string; preserveSourceFrom?: string }
+): string {
+  let result = ensureLeadParagraph(content.trim());
+
+  if (options?.preserveSourceFrom) {
+    const preserved = extractArticleSourceBlock(options.preserveSourceFrom);
+    if (preserved && !result.includes('class="article-source"')) {
+      result += preserved;
+    }
+  }
+
+  if (options?.sourceUrl && options.sourceTitle && options.sourceLabel) {
+    result = appendSourceLink(result, options.sourceUrl, options.sourceTitle, options.sourceLabel);
+  }
+
+  return ensureDisclaimer(result);
 }
 
 function parseArticleJson(raw: string): GeneratedArticle {
@@ -501,21 +540,11 @@ export async function generateBlogDraft(input: BlogAgentInput = {}): Promise<Blo
   const tags = buildPostTags(picked.area.title, article.tags);
   const sourceLabel = provider === 'consultant' ? 'Источник (КонсультантПлюс)' : 'Официальная публикация';
 
-  if (!article.content.includes(picked.sourceUrl)) {
-    article.content += `<p class="article-source">${sourceLabel}: <a href="${picked.sourceUrl}" target="_blank" rel="noopener noreferrer">${picked.sourceTitle}</a></p>`;
-  }
-
-  if (!article.content.toLowerCase().includes('информацион')) {
-    article.content += '<p class="article-disclaimer">Материал носит информационный характер и не является индивидуальной юридической консультацией.</p>';
-  }
-
-  // Если модель не поставила lead — обернём первый абзац
-  if (!article.content.includes('class="lead"')) {
-    article.content = article.content.replace(
-      /<p(\s[^>]*)?>/,
-      '<p class="lead"$1>'
-    );
-  }
+  article.content = finalizeArticleContent(article.content, {
+    sourceUrl: picked.sourceUrl,
+    sourceTitle: picked.sourceTitle,
+    sourceLabel
+  });
 
   const slug = await ensureUniqueSlug(article.slug || slugify(article.title));
   const category = 'Отраслевые новости';
@@ -654,6 +683,10 @@ export async function rewriteBlogDraft(postId: string): Promise<BlogAgentResult>
   // Сохраняем теги и автора — это метаданные, а не часть текста
   const tags = buildPostTags(area.title, article.tags);
 
+  article.content = finalizeArticleContent(article.content, {
+    preserveSourceFrom: post.content
+  });
+
   const updated = await prisma.post.update({
     where: { id: postId },
     data: {
@@ -693,9 +726,10 @@ function buildRewriteBrief(post: {
 }): string {
   const text = stripHtmlToText(post.content || '').slice(0, 4000);
   return [
-    'Задача: РЕРАЙТ уже опубликованной статьи блога по текущему шаблону.',
-    'Не ищи новый документ — перепиши существующий текст заново по тем же правилам (лид → суть → кому важно → что делать → источник).',
-    'Сохрани смысл, факты, ссылки и цифры. Измени структуру, формулировки и подачу.',
+    'Задача: РЕРАЙТ уже опубликованной экспертной статьи блога по текущему шаблону.',
+    'Не ищи новый документ — перепиши существующий текст заново по тем же правилам:',
+    'lead → «О чем этот документ» → «Кого касается» → «Что означает на практике» → «Комментарий специалистов «Адвокаты Туапсе»» → aside с итогом.',
+    'Это НЕ новость. Сохрани смысл, факты, ссылки и цифры. Измени формулировки и подачу.',
     '',
     `Текущий заголовок: ${post.title}`,
     `Текущее превью: ${post.previewText || ''}`,

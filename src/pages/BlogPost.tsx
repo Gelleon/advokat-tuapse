@@ -131,7 +131,7 @@ const BlogPost = () => {
             Вернуться в блог
           </Link>
 
-          <article itemScope itemType="https://schema.org/NewsArticle">
+          <article itemScope itemType="https://schema.org/Article">
             <header className="mb-10">
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium tracking-widest uppercase text-primary/40 mb-6">
                 <span className="text-secondary">{topic}</span>
