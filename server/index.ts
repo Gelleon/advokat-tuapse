@@ -21,6 +21,9 @@ const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 5000;
 
+// За nginx: корректные secure-cookies и req.protocol
+app.set('trust proxy', 1);
+
 const allowedOrigins = [
   'http://advokat-tuapse.ru',
   'https://advokat-tuapse.ru',

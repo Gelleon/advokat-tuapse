@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { usePosts, Post } from '../../store/usePosts';
 import { Trash2, Edit2, X, Image as ImageIcon, Calendar, Sparkles, Loader2, Send } from 'lucide-react';
 import { API_URL, BASE_URL } from '../../config';
+import { apiFetch } from '../../utils/api';
 import { PRACTICE_AREA_OPTIONS } from '../../data/practiceAreas';
 
 const nowLocalInput = () => {
@@ -124,7 +125,7 @@ const BlogAdmin = () => {
     setAgentMessage(null);
 
     try {
-      const response = await fetch(`${API_URL}/ai/blog/generate`, {
+      const response = await apiFetch(`${API_URL}/ai/blog/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -210,7 +211,7 @@ const BlogAdmin = () => {
   const previousContentLen = (formData.content || '').length;
 
   try {
-    const response = await fetch(`${API_URL}/ai/blog/rewrite`, {
+    const response = await apiFetch(`${API_URL}/ai/blog/rewrite`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -279,7 +280,7 @@ const handleRegenerateImage = async () => {
     setIsRegeneratingImage(true);
     setAgentMessage(null);
     try {
-      const response = await fetch(`${API_URL}/ai/blog/regenerate-image`, {
+      const response = await apiFetch(`${API_URL}/ai/blog/regenerate-image`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

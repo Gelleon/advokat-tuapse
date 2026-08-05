@@ -19,6 +19,9 @@ export const authenticateToken = (req: AuthRequest, res: Response, next: NextFun
     req.user = verified;
     next();
   } catch (error) {
-    res.status(403).json({ message: 'Недействительный токен.' });
+    const expired = error instanceof jwt.TokenExpiredError;
+    res.status(401).json({
+      message: expired ? 'Сессия истекла. Войдите снова.' : 'Недействительный токен.'
+    });
   }
 };

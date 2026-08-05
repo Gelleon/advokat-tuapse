@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Seo from '../components/Seo';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Lock, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { API_URL } from '../config';
@@ -10,6 +10,8 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const sessionExpired = searchParams.get('expired') === '1';
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,6 +49,11 @@ const Login = () => {
           <p className="text-slate-500 mt-2 text-center">
             Введите логин и пароль для доступа
           </p>
+          {sessionExpired && (
+            <p className="text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-4 text-sm text-center">
+              Сессия истекла. Войдите снова, чтобы продолжить работу в админке.
+            </p>
+          )}
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">

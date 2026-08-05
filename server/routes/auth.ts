@@ -2,6 +2,7 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
+import { getAuthCookieOptions } from '../utils/authCookie';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -26,16 +27,10 @@ router.post('/login', async (req, res) => {
     }
 
     const token = jwt.sign({ id: admin.id, username: admin.username }, JWT_SECRET, {
-      expiresIn: '1d',
+      expiresIn: '7d',
     });
 
-    // Устанавливаем токен в httpOnly cookie (защита от XSS)
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // true для HTTPS
-      sameSite: 'strict',
-      maxAge: 24 * 60 * 60 * 1000, // 1 день
-    });
+    res.cookie('token', token, getAuthCookieOptions());
 
     res.json({ message: 'Успешный вход' });
   } catch (error) {
@@ -45,20 +40,24 @@ router.post('/login', async (req, res) => {
 });
 
 router.post('/logout', (req, res) => {
-  res.clearCookie('token');
+  res.clearCookie('token', getAuthCookieOptions());
   res.json({ message: 'Успешный выход' });
 });
 
 router.get('/me', (req, res) => {
   const token = req.cookies.token;
   if (!token) {
-    return res.status(401).json({ isAuthenticated: false });
+    return res.status(401).json({ isAuthenticated: false, message: 'Требуется авторизация.' });
   }
   try {
     jwt.verify(token, JWT_SECRET);
     res.json({ isAuthenticated: true });
   } catch (err) {
-    res.status(401).json({ isAuthenticated: false });
+    const expired = err instanceof jwt.TokenExpiredError;
+    res.status(401).json({
+      isAuthenticated: false,
+      message: expired ? 'Сессия истекла. Войдите снова.' : 'Недействительный токен.'
+    });
   }
 });
 
