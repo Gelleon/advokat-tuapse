@@ -1,4 +1,5 @@
 import { Helmet } from 'react-helmet-async';
+import { useLocation } from 'react-router-dom';
 import {
   SITE_NAME,
   DEFAULT_OG_IMAGE,
@@ -23,7 +24,7 @@ interface SeoProps {
 const Seo = ({
   title,
   description,
-  path = '/',
+  path,
   image,
   type = 'website',
   noindex = false,
@@ -32,7 +33,9 @@ const Seo = ({
   modifiedTime,
   jsonLd,
 }: SeoProps) => {
-  const url = absoluteUrl(path || '/');
+  const { pathname } = useLocation();
+  // Канонический URL = текущий маршрут, если path не передан явно (не подставляем главную)
+  const url = absoluteUrl(path ?? pathname);
   const ogImage = image
     ? image.startsWith('http')
       ? image

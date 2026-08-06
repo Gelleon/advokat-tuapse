@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && node server/generate-sitemap.cjs dist/sitemap.xml && node server/generate-feed.cjs dist/feed.yml",
+    "build": "vite build && node server/prerender-meta.cjs && node server/generate-sitemap.cjs dist/sitemap.xml && node server/generate-feed.cjs dist/feed.yml",
     "generate:sitemap": "node server/generate-sitemap.cjs dist/sitemap.xml",
     "generate:feed": "node server/generate-feed.cjs dist/feed.yml",
     "generate:feed-data": "node scripts/extract-service-feed-data.cjs",

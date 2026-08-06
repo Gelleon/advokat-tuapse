@@ -74,18 +74,35 @@ const BlogPost = () => {
     return Array.from(new Set(parts.filter(Boolean))).join(', ');
   }, [post, visibleTags]);
 
+  const articlePath = slug ? `/blog/${slug}` : '/blog';
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-surface flex items-center justify-center text-primary/50 font-light">
-        Загрузка...
+      <div className="min-h-screen bg-surface font-sans">
+        <Seo
+          title={`Статья | ${SITE_NAME}`}
+          description="Правовые материалы и экспертные статьи адвокатов Туапсе."
+          path={articlePath}
+        />
+        <div className="min-h-screen flex items-center justify-center text-primary/50 font-light">
+          Загрузка...
+        </div>
       </div>
     );
   }
 
   if (!post) {
     return (
-      <div className="min-h-screen bg-surface flex items-center justify-center text-primary/50 text-xl font-light">
-        Публикация не найдена
+      <div className="min-h-screen bg-surface font-sans">
+        <Seo
+          title={`Публикация не найдена | ${SITE_NAME}`}
+          description="Запрошенная публикация не найдена."
+          path={articlePath}
+          noindex
+        />
+        <div className="min-h-screen flex items-center justify-center text-primary/50 text-xl font-light">
+          Публикация не найдена
+        </div>
       </div>
     );
   }

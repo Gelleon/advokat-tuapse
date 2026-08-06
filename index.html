@@ -4,12 +4,11 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/scales.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- Fallback meta; Helmet replaces these via data-rh after React hydrate.
-         Do NOT put a hardcoded canonical here: SPA serves this file for every route,
-         and a homepage canonical on /blog etc. would make Google drop those URLs. -->
-    <title data-rh="true">Адвокаты Туапсе | Юридические услуги</title>
-    <meta data-rh="true" name="description" content="Квалифицированная юридическая помощь в Туапсе. Арбитражные споры, защита бизнеса, семейное и наследственное право." />
-    <meta data-rh="true" name="robots" content="index, follow" />
+    <!-- Fallback meta; prerender-meta.cjs writes route-specific title/canonical at build time.
+         React Helmet updates these after hydrate for users in the browser. -->
+    <title>Адвокаты Туапсе | Профессиональные юридические услуги</title>
+    <meta name="description" content="Квалифицированная юридическая помощь в Туапсе. Арбитражные споры, защита бизнеса, семейное и наследственное право. Более 15 лет успешной практики." />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
