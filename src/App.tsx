@@ -72,18 +72,9 @@ const ScrollToTop = () => {
   return null;
 };
 
-/** Убирает статический SEO-блок из prerender после загрузки React */
-const StaticSeoCleanup = () => {
-  useEffect(() => {
-    document.getElementById('static-seo')?.remove();
-  }, []);
-  return null;
-};
-
 function App() {
   return (
     <BrowserRouter>
-      <StaticSeoCleanup />
       <ScrollToTop />
       <CasesProvider>
         <Routes>

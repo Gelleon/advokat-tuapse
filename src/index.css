@@ -23,6 +23,11 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  /* Prerender SEO block for crawlers — never shown to users */
+  #static-seo {
+    display: none !important;
+  }
   
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Playfair Display', serif;
