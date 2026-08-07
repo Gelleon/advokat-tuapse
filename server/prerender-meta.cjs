@@ -20,6 +20,7 @@ const STATIC_PAGES = [
   {
     route: '/',
     title: 'Адвокаты Туапсе | Профессиональные юридические услуги',
+    h1: 'Адвокаты Туапсе',
     description:
       'Квалифицированная юридическая помощь в Туапсе. Арбитражные споры, защита бизнеса, семейное и наследственное право. Более 15 лет успешной практики.',
     root: true,
@@ -27,17 +28,20 @@ const STATIC_PAGES = [
   {
     route: '/blog',
     title: 'Блог адвокатов | Экспертные статьи и новости юриспруденции',
+    h1: 'Блог',
     description:
       'Читайте полезные статьи, обзоры судебной практики и юридические советы от ведущих адвокатов Туапсе.',
   },
   {
     route: '/privacy',
     title: 'Политика конфиденциальности | Адвокаты Туапсе',
+    h1: 'Политика конфиденциальности',
     description: 'Политика конфиденциальности и обработки персональных данных на сайте advokat-tuapse.ru',
   },
   {
     route: '/terms',
     title: 'Условия использования | Адвокаты Туапсе',
+    h1: 'Условия использования',
     description: 'Пользовательское соглашение и условия использования сайта advokat-tuapse.ru',
   },
 ];
@@ -75,12 +79,14 @@ function extractServicePages() {
       }
 
       const metaTitle = chunk.match(/metaTitle:\s*'([^']+)'/);
+      const shortTitle = chunk.match(/shortTitle:\s*'([^']+)'/);
       const metaDescription = chunk.match(/metaDescription:\s*\n?\s*'([^']+)'/);
       if (!metaTitle) continue;
 
       pages.push({
         route: routePath,
         title: metaTitle[1],
+        h1: shortTitle ? shortTitle[1] : metaTitle[1].split('—')[0].trim(),
         description: metaDescription ? metaDescription[1] : metaTitle[1],
       });
     }
@@ -99,14 +105,17 @@ function injectPageMeta(html, page) {
 
   let result = html;
 
-  result = result.replace(/<title[^>]*>[\s\S]*?<\/title>/, `<title>${title}</title>`);
+  result = result.replace(
+    /<title[^>]*>[\s\S]*?<\/title>/,
+    `<title data-rh="true">${title}</title>`
+  );
   result = result.replace(
     /<meta[^>]*name="description"[^>]*>/,
-    `<meta name="description" content="${description}" />`
+    `<meta data-rh="true" name="description" content="${description}" />`
   );
   result = result.replace(
     /<meta[^>]*name="robots"[^>]*>/,
-    `<meta name="robots" content="${robots}" />`
+    `<meta data-rh="true" name="robots" content="${robots}" />`
   );
 
   result = result.replace(/\s*<link rel="canonical"[^>]*>/g, '');
@@ -116,23 +125,41 @@ function injectPageMeta(html, page) {
   result = result.replace(/\s*<meta property="og:type"[^>]*>/g, '');
 
   const seoBlock = [
-    `<link rel="canonical" href="${canonical}" />`,
-    `<meta property="og:title" content="${title}" />`,
-    `<meta property="og:description" content="${description}" />`,
-    `<meta property="og:url" content="${canonical}" />`,
-    `<meta property="og:type" content="${page.type || 'website'}" />`,
+    `<link rel="canonical" href="${canonical}" data-rh="true" />`,
+    `<meta property="og:title" content="${title}" data-rh="true" />`,
+    `<meta property="og:description" content="${description}" data-rh="true" />`,
+    `<meta property="og:url" content="${canonical}" data-rh="true" />`,
+    `<meta property="og:type" content="${page.type || 'website'}" data-rh="true" />`,
   ].join('\n    ');
 
   result = result.replace(
-    /<meta name="robots" content="[^"]*" \/>/,
+    /<meta data-rh="true" name="robots" content="[^"]*" \/>/,
     `$&\n    ${seoBlock}`
   );
 
   return result;
 }
 
+function injectStaticBody(html, page) {
+  const h1 = escapeHtml(page.h1 || page.title.split('|')[0].trim());
+  const description = escapeHtml(page.description);
+  const block = [
+    '<main id="static-seo">',
+    `      <h1>${h1}</h1>`,
+    `      <p>${description}</p>`,
+    '    </main>',
+  ].join('\n    ');
+
+  let result = html.replace(/\s*<main id="static-seo">[\s\S]*?<\/main>/, '');
+  return result.replace('<div id="root"></div>', `${block}\n    <div id="root"></div>`);
+}
+
+function buildPageHtml(templateHtml, page) {
+  return injectStaticBody(injectPageMeta(templateHtml, page), page);
+}
+
 function writeRouteHtml(distDir, templateHtml, page) {
-  const html = injectPageMeta(templateHtml, page);
+  const html = buildPageHtml(templateHtml, page);
   if (page.root) {
     fs.writeFileSync(path.join(distDir, 'index.html'), html, 'utf8');
     return;
@@ -174,6 +201,7 @@ async function main() {
       pages.push({
         route: `/blog/${post.slug}`,
         title: post.metaTitle || `${post.title} | Адвокаты Туапсе`,
+        h1: post.title,
         description: post.metaDescription || post.previewText,
         type: 'article',
       });
