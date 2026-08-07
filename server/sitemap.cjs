@@ -52,13 +52,15 @@ async function generateSitemapXml(prisma, baseUrl) {
   });
 
   const normalizedBaseUrl = baseUrl.replace(/\/$/, '');
+  const buildDate = new Date().toISOString();
 
   let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
   xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
 
   STATIC_ROUTES.forEach((route) => {
     xml += '  <url>\n';
-    xml += `    <loc>${normalizedBaseUrl}${route.url}</loc>\n`;
+    xml += `    <loc>${normalizedBaseUrl}${route.url === '/' ? '/' : route.url}</loc>\n`;
+    xml += `    <lastmod>${buildDate}</lastmod>\n`;
     xml += `    <changefreq>${route.changefreq}</changefreq>\n`;
     xml += `    <priority>${route.priority}</priority>\n`;
     xml += '  </url>\n';

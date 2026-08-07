@@ -569,7 +569,32 @@ Run-Ssh "cd $REMOTE_DIR && npm run build"
 Run-Ssh "cd $REMOTE_DIR/server && node generate-sitemap.cjs ../dist/sitemap.xml"
 Run-Ssh "test -f $REMOTE_DIR/dist/sitemap.xml && head -n 1 $REMOTE_DIR/dist/sitemap.xml | grep -q '<?xml' || (echo SITEMAP_NOT_XML; exit 1)"
 Run-Ssh "curl -fsS https://advokat-tuapse.ru/sitemap.xml | head -n 1 | grep -q '<?xml' && echo LIVE_SITEMAP_OK || (echo LIVE_SITEMAP_IS_HTML; exit 1)"
+
+# Nginx: убрать 301 на trailing slash (canonical/sitemap без слэша)
+$nginxSite = '/etc/nginx/sites-available/advokat-tuapse'
+$nginxPatch = @"
+if [ -f '$nginxSite' ]; then
+  if grep -q 'try_files `$uri `$uri/ /index.html' '$nginxSite' && ! grep -q 'rewrite \^(.+)/\$ `$1 last' '$nginxSite'; then
+    sed -i 's|try_files `$uri `$uri/ /index.html;|rewrite ^(.+)/$ `$1 last;\n        try_files `$uri `$uri/index.html /index.html;|' '$nginxSite'
+    nginx -t && systemctl reload nginx && echo NGINX_SEO_OK
+  elif grep -q 'try_files `$uri `$uri/index.html /index.html' '$nginxSite'; then
+    echo NGINX_SEO_ALREADY_OK
+  else
+    echo NGINX_SEO_MANUAL_REQUIRED
+  fi
+else
+  echo NGINX_SITE_NOT_FOUND
+fi
+"@
+Run-Ssh $nginxPatch
+Run-Ssh "code=`$(curl -s -o /dev/null -w '%{http_code}' https://advokat-tuapse.ru/blog)`; test `"`$code`" = '200' && echo SEO_BLOG_200 || (echo SEO_BLOG_REDIRECT_OR_ERROR:`$code; exit 1)"
+Run-Ssh "code=`$(curl -s -o /dev/null -w '%{http_code}' https://advokat-tuapse.ru/zemelnye-spory/sobstvennost-i-arenda)`; test `"`$code`" = '200' && echo SEO_SERVICE_200 || (echo SEO_SERVICE_REDIRECT_OR_ERROR:`$code; exit 1)"
+
 Restart-RemoteServer
+
+# Переобход в Яндекс.Вебмастер (если задан YANDEX_WEBMASTER_OAUTH_TOKEN в server/.env)
+$yandexRecrawl = Run-SshQuiet "cd $REMOTE_DIR/server && if grep -q '^YANDEX_WEBMASTER_OAUTH_TOKEN=.\+' .env 2>/dev/null; then node scripts/yandex-recrawl.cjs ../dist/sitemap.xml; else echo YANDEX_RECRAWL_SKIPPED; fi"
+Write-Host $yandexRecrawl
 
 # ---- Step 6: Verify data is still there ----------------------
 
