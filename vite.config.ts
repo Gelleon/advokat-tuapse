@@ -11,14 +11,18 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (!id.includes('node_modules')) return;
-          if (id.includes('react-dom') || id.includes('/react/') || id.includes('\\react\\') || id.includes('react-router')) {
+          // Keep react + helmet in one chunk: splitting helmet caused
+          // "Cannot access 'f' before initialization" (circular chunk init).
+          if (
+            id.includes('react-dom') ||
+            id.includes('react-router') ||
+            id.includes('react-helmet-async') ||
+            /[\\/]react[\\/]/.test(id)
+          ) {
             return 'vendor-react';
           }
           if (id.includes('lucide-react')) {
             return 'vendor-icons';
-          }
-          if (id.includes('react-helmet-async')) {
-            return 'vendor-helmet';
           }
         },
       },
