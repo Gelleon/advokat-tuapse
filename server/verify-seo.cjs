@@ -10,6 +10,9 @@ const FORBIDDEN_TITLE_SNIPPETS = [
   'Профессиональные юридические услуги',
 ];
 
+const HOMEPAGE_DESCRIPTION_SNIPPET =
+  'Арбитражные споры, защита бизнеса, семейное и наследственное право';
+
 const SAMPLE_ROUTES = [
   {
     route: '/',
@@ -19,6 +22,7 @@ const SAMPLE_ROUTES = [
   {
     route: '/zemelnye-spory/sobstvennost-i-arenda',
     titleIncludes: 'собственности и аренде',
+    descriptionIncludes: 'аренды на землю',
     canonical: `${SITE_URL}/zemelnye-spory/sobstvennost-i-arenda`,
   },
   {
@@ -57,12 +61,14 @@ function extractTag(html, pattern) {
 function verifyRoute(distDir, sample) {
   const html = readRouteHtml(distDir, sample.route);
   const title = extractTag(html, /<title[^>]*>([^<]+)<\/title>/);
+  const description = extractTag(html, /<meta[^>]*name="description"[^>]*content="([^"]+)"/);
   const canonical = extractTag(html, /<link rel="canonical" href="([^"]+)"/);
   const h1 = extractTag(html, /<main id="static-seo">\s*<h1>([^<]+)<\/h1>/);
 
   const errors = [];
 
   if (!title) errors.push('missing <title>');
+  if (!description) errors.push('missing meta description');
   if (!canonical) errors.push('missing rel=canonical');
   if (canonical !== sample.canonical) {
     errors.push(`canonical mismatch: ${canonical} != ${sample.canonical}`);
@@ -70,13 +76,19 @@ function verifyRoute(distDir, sample) {
   if (!title.includes(sample.titleIncludes)) {
     errors.push(`title "${title}" does not include "${sample.titleIncludes}"`);
   }
+  if (sample.descriptionIncludes && !description.includes(sample.descriptionIncludes)) {
+    errors.push(`description does not include "${sample.descriptionIncludes}"`);
+  }
   if (!h1) errors.push('missing static <h1> for crawlers');
 
   if (sample.route !== '/') {
     for (const snippet of FORBIDDEN_TITLE_SNIPPETS) {
-      if (title === `Адвокаты Туапсе | ${snippet}` || title === snippet) {
+      if (title.includes(snippet)) {
         errors.push(`homepage title leaked: ${title}`);
       }
+    }
+    if (description.includes(HOMEPAGE_DESCRIPTION_SNIPPET)) {
+      errors.push(`homepage description leaked: ${description.slice(0, 80)}...`);
     }
     if (canonical === `${SITE_URL}/` || canonical === SITE_URL) {
       errors.push(`homepage canonical leaked on ${sample.route}`);

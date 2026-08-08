@@ -570,21 +570,95 @@ Run-Ssh "cd $REMOTE_DIR/server && node generate-sitemap.cjs ../dist/sitemap.xml"
 Run-Ssh "test -f $REMOTE_DIR/dist/sitemap.xml && head -n 1 $REMOTE_DIR/dist/sitemap.xml | grep -q '<?xml' || (echo SITEMAP_NOT_XML; exit 1)"
 Run-Ssh "curl -fsS https://advokat-tuapse.ru/sitemap.xml | head -n 1 | grep -q '<?xml' && echo LIVE_SITEMAP_OK || (echo LIVE_SITEMAP_IS_HTML; exit 1)"
 
-# Nginx: убрать 301 на trailing slash (canonical/sitemap без слэша)
-$nginxSite = '/etc/nginx/sites-available/advokat-tuapse'
+# Nginx: SEO try_files + gzip + long-cache для /assets и /fonts
+$nginxSite = '/etc/nginx/sites-available/advokat'
+$nginxEnabled = '/etc/nginx/sites-enabled/advokat'
 $nginxPatch = @"
-if [ -f '$nginxSite' ]; then
-  if grep -q 'try_files `$uri `$uri/ /index.html' '$nginxSite' && ! grep -q 'rewrite \^(.+)/\$ `$1 last' '$nginxSite'; then
-    sed -i 's|try_files `$uri `$uri/ /index.html;|rewrite ^(.+)/$ `$1 last;\n        try_files `$uri `$uri/index.html /index.html;|' '$nginxSite'
-    nginx -t && systemctl reload nginx && echo NGINX_SEO_OK
-  elif grep -q 'try_files `$uri `$uri/index.html /index.html' '$nginxSite'; then
-    echo NGINX_SEO_ALREADY_OK
-  else
-    echo NGINX_SEO_MANUAL_REQUIRED
-  fi
-else
+set -e
+SITE='$nginxSite'
+ENABLED='$nginxEnabled'
+if [ ! -f "`$SITE" ]; then
   echo NGINX_SITE_NOT_FOUND
+  exit 0
 fi
+
+# SEO: убрать 301 на trailing slash
+if grep -q 'try_files `$uri `$uri/ /index.html' "`$SITE" && ! grep -q 'rewrite \^(.+)/\$ `$1 last' "`$SITE"; then
+  sed -i 's|try_files `$uri `$uri/ /index.html;|rewrite ^(.+)/$ `$1 last;\n        try_files `$uri/index.html `$uri /index.html;|' "`$SITE"
+  echo NGINX_SEO_PATCHED
+elif grep -q 'try_files `$uri/index.html `$uri /index.html' "`$SITE"; then
+  echo NGINX_SEO_ALREADY_OK
+else
+  echo NGINX_SEO_MANUAL_REQUIRED
+fi
+
+# Gzip (если ещё нет)
+if ! grep -q 'gzip on;' "`$SITE"; then
+  python3 - <<'PY'
+from pathlib import Path
+path = Path("$nginxSite")
+text = path.read_text()
+needle = "client_max_body_size 20m;"
+block = """client_max_body_size 20m;
+
+    gzip on;
+    gzip_comp_level 5;
+    gzip_min_length 256;
+    gzip_proxied any;
+    gzip_vary on;
+    gzip_types
+        text/plain
+        text/css
+        text/xml
+        text/javascript
+        application/javascript
+        application/x-javascript
+        application/json
+        application/xml
+        image/svg+xml
+        font/woff2;"""
+if needle in text and "gzip on;" not in text:
+    path.write_text(text.replace(needle, block, 1))
+    print("NGINX_GZIP_PATCHED")
+else:
+    print("NGINX_GZIP_SKIP")
+PY
+else
+  echo NGINX_GZIP_ALREADY_OK
+fi
+
+# Long-cache для /assets/ и /fonts/
+if ! grep -q 'location ^~ /assets/' "`$SITE"; then
+  python3 - <<'PY'
+from pathlib import Path
+path = Path("$nginxSite")
+text = path.read_text()
+marker = "    location / {"
+block = """    location ^~ /assets/ {
+        access_log off;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        try_files `$uri =404;
+    }
+
+    location ^~ /fonts/ {
+        access_log off;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        try_files `$uri =404;
+    }
+
+    location / {"""
+if marker in text and "location ^~ /assets/" not in text:
+    path.write_text(text.replace(marker, block, 1))
+    print("NGINX_CACHE_PATCHED")
+else:
+    print("NGINX_CACHE_SKIP")
+PY
+else
+  echo NGINX_CACHE_ALREADY_OK
+fi
+
+cp "`$SITE" "`$ENABLED"
+nginx -t && systemctl reload nginx && echo NGINX_RELOADED
 "@
 Run-Ssh $nginxPatch
 Run-Ssh "code=`$(curl -s -o /dev/null -w '%{http_code}' https://advokat-tuapse.ru/blog)`; test `"`$code`" = '200' && echo SEO_BLOG_200 || (echo SEO_BLOG_REDIRECT_OR_ERROR:`$code; exit 1)"

@@ -1,15 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Home from './pages/Home';
-import Admin from './pages/Admin';
-import Login from './pages/Login';
-import Blog from './pages/Blog';
-import BlogPost from './pages/BlogPost';
-import Privacy from './pages/Privacy';
-import Terms from './pages/Terms';
-import ServicePage from './pages/ServicePage';
 import { API_URL } from './config';
 import { CasesProvider } from './store/useCases';
+
+const Admin = lazy(() => import('./pages/Admin'));
+const Login = lazy(() => import('./pages/Login'));
+const Blog = lazy(() => import('./pages/Blog'));
+const BlogPost = lazy(() => import('./pages/BlogPost'));
+const Privacy = lazy(() => import('./pages/Privacy'));
+const Terms = lazy(() => import('./pages/Terms'));
+const ServicePage = lazy(() => import('./pages/ServicePage'));
+
+const RouteFallback = () => (
+  <div className="min-h-screen flex items-center justify-center bg-slate-50 text-primary/60">
+    Загрузка...
+  </div>
+);
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -77,23 +84,25 @@ function App() {
     <BrowserRouter>
       <ScrollToTop />
       <CasesProvider>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/blog" element={<Blog />} />
-          <Route path="/blog/:slug" element={<BlogPost />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/privacy" element={<Privacy />} />
-          <Route path="/terms" element={<Terms />} />
-          <Route path="/admin" element={
-            <ProtectedRoute>
-              <Admin />
-            </ProtectedRoute>
-          } />
-          <Route path="/:areaSlug" element={<ServicePage />} />
-          <Route path="/:areaSlug/:topicSlug" element={<ServicePage />} />
-        </Routes>
+        <Suspense fallback={<RouteFallback />}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/blog" element={<Blog />} />
+            <Route path="/blog/:slug" element={<BlogPost />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/admin" element={
+              <ProtectedRoute>
+                <Admin />
+              </ProtectedRoute>
+            } />
+            <Route path="/:areaSlug" element={<ServicePage />} />
+            <Route path="/:areaSlug/:topicSlug" element={<ServicePage />} />
+          </Routes>
+        </Suspense>
       </CasesProvider>
-      </BrowserRouter>
+    </BrowserRouter>
   );
 }
 

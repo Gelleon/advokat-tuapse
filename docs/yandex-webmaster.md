@@ -2,15 +2,32 @@
 
 ## 1. Получить OAuth-токен
 
-1. Зарегистируйте приложение: [oauth.yandex.ru](https://oauth.yandex.ru/)
-2. Права: **Яндекс.Вебмастер** (`webmaster:verify` или полный доступ к API Вебмастера)
-3. Получите токен по ссылке (подставьте `CLIENT_ID`):
+### Права приложения (oauth.yandex.ru)
 
-```
-https://oauth.yandex.ru/authorize?response_type=token&client_id=CLIENT_ID
+У **Яндекс.Вебmaster** всего **два** scope — включите оба (больше для API нет):
+
+| Scope | Зачем |
+|-------|--------|
+| `webmaster:hostinfo` | Список сайтов, статистика, SQI, диагностика, поисковые запросы, **переобход URL** |
+| `webmaster:verify` | Добавление сайтов, статус верификации и индексации |
+
+`direct:api` (Яндекс.Директ) для нашего проекта **не нужен** — можно снять галочку.
+
+После любого изменения прав нужно **заново получить токен** (старый не подхватит новые scope).
+
+### Авторизация
+
+1. Приложение: [oauth.yandex.ru](https://oauth.yandex.ru/) → **Веб-сервисы**, Redirect URI: `https://oauth.yandex.ru/verification_code`
+2. Client ID / Secret — в `deploy.env`
+3. Получить токен:
+
+```powershell
+.\scripts\yandex-auth.ps1
+# Яндекс покажет 7-значный код на странице →
+.\scripts\yandex-auth.ps1 -AuthCode 1234567
 ```
 
-4. Добавьте в `server/.env` на сервере:
+4. Токен в `server/.env` на сервере:
 
 ```env
 YANDEX_WEBMASTER_OAUTH_TOKEN=your_oauth_token

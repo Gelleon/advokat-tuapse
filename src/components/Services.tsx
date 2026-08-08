@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Scale, Heart, MapPin, TrendingDown, UserCheck, Gavel, ArrowRight } from 'lucide-react';
-import { getMainServices, type ServiceIconId } from '../data/services';
+import { MAIN_SERVICE_CARDS, type ServiceIconId } from '../data/services/catalog';
 
 const ICONS: Record<ServiceIconId, React.ComponentType<{ className?: string; strokeWidth?: number }>> = {
   criminal: Gavel,
@@ -12,18 +12,7 @@ const ICONS: Record<ServiceIconId, React.ComponentType<{ className?: string; str
   inheritance: UserCheck,
 };
 
-const ICON_BY_AREA: Record<string, ServiceIconId> = {
-  'ugolovnye-dela': 'criminal',
-  'semeynye-spory': 'family',
-  'zemelnye-spory': 'land',
-  bankrotstvo: 'bankruptcy',
-  'arbitrazhnye-spory': 'arbitration',
-  'nasledstvennye-spory': 'inheritance',
-};
-
 const Services = () => {
-  const services = getMainServices();
-
   return (
     <section id="services" className="py-32 bg-surface">
       <div className="container mx-auto px-6 max-w-7xl">
@@ -40,9 +29,8 @@ const Services = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
-          {services.map((service) => {
-            const iconId = ICON_BY_AREA[service.areaSlug] || 'arbitration';
-            const Icon = ICONS[iconId];
+          {MAIN_SERVICE_CARDS.map((service) => {
+            const Icon = ICONS[service.iconId];
             const children = service.children || [];
 
             return (

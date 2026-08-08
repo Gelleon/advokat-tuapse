@@ -95,6 +95,26 @@ function extractServicePages() {
   return pages;
 }
 
+function injectWebPageSchema(html, page) {
+  const canonical = absoluteUrl(page.route);
+  const schema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: page.title,
+    description: page.description,
+    url: canonical,
+    inLanguage: 'ru-RU',
+    isPartOf: {
+      '@type': 'WebSite',
+      name: 'Адвокаты Туапсе',
+      url: `${SITE_URL}/`,
+    },
+  };
+
+  const script = `<script type="application/ld+json" data-seo="webpage">${JSON.stringify(schema)}</script>`;
+  return html.replace('</head>', `    ${script}\n  </head>`);
+}
+
 function injectPageMeta(html, page) {
   const canonical = absoluteUrl(page.route);
   const title = escapeHtml(page.title);
@@ -155,7 +175,10 @@ function injectStaticBody(html, page) {
 }
 
 function buildPageHtml(templateHtml, page) {
-  return injectStaticBody(injectPageMeta(templateHtml, page), page);
+  return injectWebPageSchema(
+    injectStaticBody(injectPageMeta(templateHtml, page), page),
+    page
+  );
 }
 
 function writeRouteHtml(distDir, templateHtml, page) {

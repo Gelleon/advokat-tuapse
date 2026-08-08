@@ -51,9 +51,26 @@ export const CasesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
-  // Первичная загрузка при монтировании
+  // Откладываем до idle, чтобы /api/cases не конкурировал с LCP
   useEffect(() => {
-    refreshCases();
+    let cancelled = false;
+    const run = () => {
+      if (!cancelled) void refreshCases();
+    };
+
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      const id = window.requestIdleCallback(run, { timeout: 2500 });
+      return () => {
+        cancelled = true;
+        window.cancelIdleCallback(id);
+      };
+    }
+
+    const timer = window.setTimeout(run, 1200);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [refreshCases]);
 
   const addCase = async (formData: FormData): Promise<Case | null> => {
