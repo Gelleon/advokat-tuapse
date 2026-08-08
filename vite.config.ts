@@ -16,7 +16,6 @@ export default defineConfig({
           if (
             id.includes('react-dom') ||
             id.includes('react-router') ||
-            id.includes('react-helmet-async') ||
             /[\\/]react[\\/]/.test(id)
           ) {
             return 'vendor-react';

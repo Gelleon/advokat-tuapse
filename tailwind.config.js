@@ -1,6 +1,17 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  content: [
+    './index.html',
+    './src/**/*.{js,ts,jsx,tsx}',
+    '!./src/pages/Blog.tsx',
+    '!./src/pages/BlogPost.tsx',
+    '!./src/pages/Admin.tsx',
+    '!./src/pages/ServicePage.tsx',
+    '!./src/components/blog/**',
+    '!./src/components/admin/**',
+    '!./src/components/services/**',
+    '!./src/components/LatestPosts.tsx',
+  ],
   theme: {
     extend: {
       colors: {

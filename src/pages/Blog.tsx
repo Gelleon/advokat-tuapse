@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import '../styles/blog.css';
 import Seo from '../components/Seo';
 import { breadcrumbSchema } from '../seo/schemas';
 import { usePosts } from '../store/usePosts';

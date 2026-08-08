@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
+import '../styles/admin.css';
 import Seo from '../components/Seo';
 import { ArrowLeft, LogOut, Briefcase, FileText, Settings } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import CasesAdmin from '../components/admin/CasesAdmin';
 import BlogAdmin from '../components/admin/BlogAdmin';
 import SettingsAdmin from '../components/admin/SettingsAdmin';
+import { CasesProvider } from '../store/useCases';
 import { API_URL } from '../config';
 
-const Admin = () => {
+const AdminPage = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'cases' | 'blog' | 'settings'>('cases');
 
@@ -85,5 +87,11 @@ const Admin = () => {
     </div>
   );
 };
+
+const Admin = () => (
+  <CasesProvider>
+    <AdminPage />
+  </CasesProvider>
+);
 
 export default Admin;

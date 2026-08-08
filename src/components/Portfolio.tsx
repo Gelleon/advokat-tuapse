@@ -1,9 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { Eye, ChevronRight, ChevronLeft, FileText } from 'lucide-react';
-import { useCases, Case } from '../store/useCases';
+import { Eye, ChevronRight, ChevronLeft } from 'lucide-react';
+import { CasesProvider, useCases, Case } from '../store/useCases';
 import { BASE_URL } from '../config';
 
-const Portfolio = () => {
+const PortfolioSection = () => {
   const { cases } = useCases();
   const [selectedCase, setSelectedCase] = useState<Case | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -198,5 +198,11 @@ const Portfolio = () => {
     </section>
   );
 };
+
+const Portfolio = () => (
+  <CasesProvider>
+    <PortfolioSection />
+  </CasesProvider>
+);
 
 export default Portfolio;

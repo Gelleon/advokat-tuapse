@@ -12,3 +12,6 @@ Allow: /
 
 Host: advokat-tuapse.ru
 Sitemap: https://advokat-tuapse.ru/sitemap.xml
+
+# LLM-friendly site index
+# https://advokat-tuapse.ru/llms.txt

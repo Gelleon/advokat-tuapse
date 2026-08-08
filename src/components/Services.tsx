@@ -72,9 +72,10 @@ const Services = () => {
                 <Link
                   to={`/${service.path}`}
                   className="inline-flex items-center gap-2 text-xs tracking-wider uppercase text-primary/70 group-hover:text-secondary-readable transition-colors"
+                  aria-label={`Подробнее о разделе «${service.shortTitle}»`}
                 >
                   Подробнее
-                  <ArrowRight className="w-3.5 h-3.5" strokeWidth={1.5} />
+                  <ArrowRight className="w-3.5 h-3.5" strokeWidth={1.5} aria-hidden="true" />
                 </Link>
               </div>
             );
