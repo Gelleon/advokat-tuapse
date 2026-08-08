@@ -227,8 +227,9 @@ $SSH_OPTS = @(
   '-o', 'BatchMode=no',
   '-o', 'RequestTTY=no',
   '-o', 'ConnectTimeout=30',
-  '-o', 'ServerAliveInterval=15',
-  '-o', 'ServerAliveCountMax=20',
+  '-o', 'ServerAliveInterval=10',
+  '-o', 'ServerAliveCountMax=30',
+  '-o', 'TCPKeepAlive=yes',
   '-o', 'LogLevel=ERROR'
 )
 
@@ -244,14 +245,41 @@ function Convert-NativeOutput {
   })
 }
 
+function Test-SshRetryable {
+  param(
+    [int]$ExitCode,
+    [string]$Output
+  )
+  if ($ExitCode -eq 255) { return $true }
+  if ($Output -match 'closed by remote host|Connection reset|Broken pipe|kex_exchange_identification|Connection timed out') {
+    return $true
+  }
+  return $false
+}
+
 function Invoke-SshCapture {
-  param([string]$Cmd)
+  param(
+    [string]$Cmd,
+    [int]$MaxAttempts = 3
+  )
   $prevEAP = $ErrorActionPreference
   $ErrorActionPreference = 'Continue'
+  $delaySec = 5
+  $last = @{ Out = ''; RC = 255 }
   try {
-    $remoteCmd = Wrap-RemoteCommand $Cmd
-    $out = Convert-NativeOutput (& ssh @SSH_OPTS $SERVER $remoteCmd 2>&1)
-    return @{ Out = ($out -join "`n").Trim(); RC = $LASTEXITCODE }
+    for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+      $remoteCmd = Wrap-RemoteCommand $Cmd
+      $out = Convert-NativeOutput (& ssh @SSH_OPTS $SERVER $remoteCmd 2>&1)
+      $last = @{ Out = ($out -join "`n").Trim(); RC = $LASTEXITCODE }
+      if (-not (Test-SshRetryable $last.RC $last.Out)) {
+        return $last
+      }
+      if ($attempt -lt $MaxAttempts) {
+        Write-Host ("SSH disconnected (attempt {0}/{1}), retrying in {2}s ..." -f $attempt, $MaxAttempts, $delaySec) -ForegroundColor Yellow
+        Start-Sleep -Seconds $delaySec
+      }
+    }
+    return $last
   } finally {
     $ErrorActionPreference = $prevEAP
   }
@@ -269,22 +297,35 @@ function Run-Ssh {
 function Run-SshLive {
   param(
     [string]$Label,
-    [string]$Cmd
+    [string]$Cmd,
+    [int]$MaxAttempts = 3
   )
   Write-Host ''
   Write-Host $Label -ForegroundColor Cyan
   $remoteCmd = Wrap-RemoteCommand $Cmd
   $prevEAP = $ErrorActionPreference
   $ErrorActionPreference = 'Continue'
+  $delaySec = 5
   try {
-    & ssh @SSH_OPTS $SERVER $remoteCmd 2>&1 | ForEach-Object {
-      $line = if ($_ -is [System.Management.Automation.ErrorRecord]) { $_.ToString() } else { "$_" }
-      if (-not [string]::IsNullOrWhiteSpace($line)) {
-        Write-Host $line
+    for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+      $lines = @()
+      & ssh @SSH_OPTS $SERVER $remoteCmd 2>&1 | ForEach-Object {
+        $line = if ($_ -is [System.Management.Automation.ErrorRecord]) { $_.ToString() } else { "$_" }
+        if (-not [string]::IsNullOrWhiteSpace($line)) {
+          $lines += $line
+          Write-Host $line
+        }
       }
-    }
-    if ($LASTEXITCODE -ne 0) {
-      throw "ssh exited with code $LASTEXITCODE. Command: $Cmd"
+      $output = ($lines -join "`n").Trim()
+      if ($LASTEXITCODE -eq 0) {
+        return
+      }
+      if ((Test-SshRetryable $LASTEXITCODE $output) -and $attempt -lt $MaxAttempts) {
+        Write-Host ("SSH disconnected during live command (attempt {0}/{1}), retrying in {2}s ..." -f $attempt, $MaxAttempts, $delaySec) -ForegroundColor Yellow
+        Start-Sleep -Seconds $delaySec
+        continue
+      }
+      throw "ssh exited with code $LASTEXITCODE. Command: $Cmd`nOutput:`n$output"
     }
   } finally {
     $ErrorActionPreference = $prevEAP
@@ -297,21 +338,36 @@ function Run-SshQuiet {
 }
 
 function Run-SshWithRC {
-  param([string]$Cmd)
+  param(
+    [string]$Cmd,
+    [int]$MaxAttempts = 3
+  )
   $prevEAP = $ErrorActionPreference
   $ErrorActionPreference = 'Continue'
+  $delaySec = 5
   try {
-    $remoteCmd = Wrap-RemoteCommand "$Cmd; echo __DEPLOY_RC__`$?"
-    $out = Convert-NativeOutput (& ssh @SSH_OPTS $SERVER $remoteCmd 2>&1)
-    $text = ($out -join "`n").Trim()
-    $rcLine = ($text | Select-String -Pattern '__DEPLOY_RC__-?\d+\s*$' | Select-Object -First 1).Line
-    $stdout = ($text -replace '__DEPLOY_RC__-?\d+\s*$', '').Trim()
-    if ($rcLine -match '__DEPLOY_RC__(-?\d+)') {
-      $rc = [int]$Matches[1]
-    } else {
-      $rc = $LASTEXITCODE
+    for ($attempt = 1; $attempt -le $MaxAttempts; $attempt++) {
+      $remoteCmd = Wrap-RemoteCommand "$Cmd; echo __DEPLOY_RC__`$?"
+      $out = Convert-NativeOutput (& ssh @SSH_OPTS $SERVER $remoteCmd 2>&1)
+      $text = ($out -join "`n").Trim()
+      $rcLine = ($text | Select-String -Pattern '__DEPLOY_RC__-?\d+\s*$' | Select-Object -First 1).Line
+      $stdout = ($text -replace '__DEPLOY_RC__-?\d+\s*$', '').Trim()
+      if ($rcLine -match '__DEPLOY_RC__(-?\d+)') {
+        $rc = [int]$Matches[1]
+      } else {
+        $rc = $LASTEXITCODE
+      }
+      if (-not (Test-SshRetryable $rc $text)) {
+        return @{ RC = $rc; Out = $stdout }
+      }
+      if ($attempt -lt $MaxAttempts) {
+        Write-Host ("SSH disconnected (attempt {0}/{1}), retrying in {2}s ..." -f $attempt, $MaxAttempts, $delaySec) -ForegroundColor Yellow
+        Start-Sleep -Seconds $delaySec
+      } else {
+        return @{ RC = $rc; Out = $stdout }
+      }
     }
-    return @{ RC = $rc; Out = $stdout }
+    return @{ RC = 255; Out = '' }
   } finally {
     $ErrorActionPreference = $prevEAP
   }
@@ -515,24 +571,9 @@ Write-Host ''
 Write-Host '=== [7/8] Apply migrations WITHOUT data loss ===' -ForegroundColor Cyan
 
 # Existing production DBs may have tables but no _prisma_migrations (P3005 on deploy).
-$baselineCheck = @(
-  'const fs = require("fs");'
-  'if (!fs.existsSync("prisma/dev.db")) process.exit(0);'
-  'let Database;'
-  'try { Database = require("better-sqlite3"); } catch (e) { process.exit(0); }'
-  'const db = new Database("prisma/dev.db", { readonly: true });'
-  'const tables = db.prepare("SELECT name FROM sqlite_master WHERE type=''table'' AND name NOT LIKE ''sqlite_%''").all().map((r) => r.name);'
-  'const hasMig = tables.includes("_prisma_migrations");'
-  'const hasData = tables.some((t) => t !== "_prisma_migrations");'
-  'db.close();'
-  'process.exit(hasData && !hasMig ? 2 : 0);'
-) -join $nl
-$BASELINE_SCRIPT_LOCAL  = Join-Path $SCRIPTS_DIR 'baseline_check.cjs'
-$BASELINE_SCRIPT_REMOTE = "$REMOTE_DIR/server/_deploy_baseline_$TS.cjs"
-[System.IO.File]::WriteAllText($BASELINE_SCRIPT_LOCAL, $baselineCheck, [System.Text.Encoding]::ASCII)
-& scp @SSH_OPTS $BASELINE_SCRIPT_LOCAL "${SERVER}:${BASELINE_SCRIPT_REMOTE}" 2>&1 | Out-Null
-$baselineRc = Run-SshWithRC "cd $REMOTE_DIR/server && node ./_deploy_baseline_$TS.cjs"
-& ssh @SSH_OPTS $SERVER "rm -f '$BASELINE_SCRIPT_REMOTE'" 2>&1 | Out-Null
+$baselineCmd = "cd $REMOTE_DIR/server && if [ -f prisma/dev.db ] && command -v sqlite3 >/dev/null 2>&1; then HAS_MIG=`$(sqlite3 prisma/dev.db `"SELECT 1 FROM sqlite_master WHERE type='table' AND name='_prisma_migrations' LIMIT 1;`" 2>/dev/null || true); HAS_DATA=`$(sqlite3 prisma/dev.db `"SELECT 1 FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name != '_prisma_migrations' LIMIT 1;`" 2>/dev/null || true); if [ -n `"`$HAS_DATA`" ] && [ -z `"`$HAS_MIG`" ]; then exit 2; fi; fi"
+
+$baselineRc = Run-SshWithRC $baselineCmd
 
 if ($baselineRc.RC -eq 2) {
   Write-Host 'Existing DB without migration history — baselining init migration ...' -ForegroundColor Yellow
