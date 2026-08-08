@@ -42,7 +42,9 @@ const Header = ({ solid = false }: HeaderProps) => {
   return (
     <>
       <header 
-        className={`fixed top-0 left-0 right-0 z-50 min-h-[5rem] flex items-center transition-colors duration-500 ${
+        className={`fixed top-0 left-0 right-0 z-50 min-h-[5rem] flex items-center ${
+          isSolid ? 'transition-colors duration-300' : ''
+        } ${
           isSolid 
             ? 'bg-white/95 backdrop-blur-md shadow-premium' 
             : 'bg-transparent'

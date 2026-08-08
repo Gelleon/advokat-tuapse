@@ -14,30 +14,6 @@ function homeLcpShellPlugin(): Plugin {
   };
 }
 
-function asyncCssPlugin(): Plugin {
-  return {
-    name: 'async-css',
-    apply: 'build',
-    transformIndexHtml(html) {
-      return html.replace(
-        /<link rel="stylesheet"([^>]*?)href="([^"]+\.css)"([^>]*?)>/g,
-        (match, before, href, after) => {
-          if (href.includes('/fonts/')) {
-            return match;
-          }
-
-          // No rel=preload: keeps CSS off the high-priority critical chain.
-          // Inline critical-css in index.html covers first paint.
-          return [
-            `<link rel="stylesheet" href="${href}"${before}${after} media="print" onload="this.media='all'">`,
-            `<noscript><link rel="stylesheet" href="${href}"${before}${after}></noscript>`,
-          ].join('\n    ');
-        }
-      );
-    },
-  };
-}
-
 function optimizeLoadingPlugin(): Plugin {
   return {
     name: 'optimize-loading',
@@ -68,7 +44,7 @@ function optimizeLoadingPlugin(): Plugin {
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(), homeLcpShellPlugin(), asyncCssPlugin(), optimizeLoadingPlugin()],
+  plugins: [react(), homeLcpShellPlugin(), optimizeLoadingPlugin()],
   build: {
     target: 'es2020',
     modulePreload: { polyfill: false },

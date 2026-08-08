@@ -1,9 +1,17 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowRight, MessageCircle, Phone, X } from 'lucide-react';
 import { MAX_PROFILE_URL } from '../config';
 
 const Hero = () => {
   const [showConsultationPopup, setShowConsultationPopup] = useState(false);
+  const [auroraReady, setAuroraReady] = useState(false);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      setAuroraReady(true);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
 
   const scrollToPortfolio = () => {
     const portfolioSection = document.getElementById('portfolio');
@@ -34,9 +42,9 @@ const Hero = () => {
       {/* Dynamic Premium Aurora Background Effect */}
       <div className="absolute inset-0 z-0 overflow-hidden bg-[#0f172a]">
         {/* Soft static glow on mobile; full aurora only from md+ to cut paint cost */}
-        <div className="absolute top-[-10%] left-[-10%] w-[60vw] h-[60vw] max-w-[800px] max-h-[800px] rounded-full bg-secondary/10 blur-[60px] md:blur-[100px] mix-blend-screen opacity-60 md:animate-aurora-1 motion-reduce:animate-none"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] hidden md:block w-[70vw] h-[70vw] max-w-[900px] max-h-[900px] rounded-full bg-secondary/15 blur-[120px] mix-blend-screen animate-aurora-2 opacity-50 motion-reduce:animate-none" style={{ animationDelay: '-5s' }}></div>
-        <div className="absolute top-[20%] right-[10%] hidden md:block w-[50vw] h-[50vw] max-w-[600px] max-h-[600px] rounded-full bg-blue-900/20 blur-[100px] mix-blend-screen animate-aurora-3 opacity-40 motion-reduce:animate-none" style={{ animationDelay: '-10s' }}></div>
+        <div className={`absolute top-[-10%] left-[-10%] w-[60vw] h-[60vw] max-w-[800px] max-h-[800px] rounded-full bg-secondary/10 blur-[60px] md:blur-[100px] mix-blend-screen opacity-60 motion-reduce:animate-none ${auroraReady ? 'md:animate-aurora-1' : ''}`}></div>
+        <div className={`absolute bottom-[-10%] right-[-10%] hidden md:block w-[70vw] h-[70vw] max-w-[900px] max-h-[900px] rounded-full bg-secondary/15 blur-[120px] mix-blend-screen opacity-50 motion-reduce:animate-none ${auroraReady ? 'animate-aurora-2' : ''}`} style={{ animationDelay: '-5s' }}></div>
+        <div className={`absolute top-[20%] right-[10%] hidden md:block w-[50vw] h-[50vw] max-w-[600px] max-h-[600px] rounded-full bg-blue-900/20 blur-[100px] mix-blend-screen opacity-40 motion-reduce:animate-none ${auroraReady ? 'animate-aurora-3' : ''}`} style={{ animationDelay: '-10s' }}></div>
         
         {/* Noise overlay for premium texture */}
         <div className="absolute inset-0 opacity-[0.04] mix-blend-overlay pointer-events-none hidden md:block" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noiseFilter\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.7\' numOctaves=\'3\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noiseFilter)\'/%3E%3C/svg%3E")' }}></div>
