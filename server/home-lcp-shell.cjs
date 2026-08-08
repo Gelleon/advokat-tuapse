@@ -1,16 +1,31 @@
 'use strict';
 
-// Static homepage shell for instant LCP before React hydrates.
-// Keep in sync with critical-css in index.html.
+// Static homepage shell — must match Home/Header/Hero layout to avoid CLS on hydrate.
 module.exports = [
   '<div class="min-h-screen bg-surface overflow-x-hidden">',
-  '  <section class="relative min-h-[90vh] flex items-center justify-center bg-primary overflow-hidden">',
+  '  <header class="lcp-header fixed top-0 left-0 right-0 z-50 py-6">',
+  '    <div class="lcp-header-inner px-6 flex items-center justify-between">',
+  '      <span class="text-2xl font-serif font-bold text-white">Адвокаты Туапсе</span>',
+  '      <span class="lcp-menu-icon" aria-hidden="true"></span>',
+  '    </div>',
+  '  </header>',
+  '  <section class="relative min-h-[90vh] flex items-start justify-center bg-primary overflow-hidden">',
   '    <div class="relative z-10 w-full text-center px-4 sm:px-6 max-w-5xl mx-auto pt-20">',
-  '      <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-serif font-bold text-white mb-6 leading-tight">',
-  '        Профессиональная юридическая защита',
-  '        <span class="block text-secondary mt-2">ваших интересов</span>',
-  '      </h1>',
+  '      <div class="mb-10">',
+  '        <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-serif font-bold text-white mb-6 leading-tight">',
+  '          Профессиональная юридическая защита',
+  '          <span class="block text-secondary mt-2">ваших интересов</span>',
+  '        </h1>',
+  '        <p class="hero-subtitle text-lg text-white/80 max-w-2xl mx-auto leading-relaxed">',
+  '          Комплексное правовое сопровождение бизнеса и частных лиц в Туапсе. Опыт, конфиденциальность, результат.',
+  '        </p>',
+  '      </div>',
+  '      <div class="hero-actions" aria-hidden="true">',
+  '        <div class="hero-btn-slot"></div>',
+  '        <div class="hero-btn-slot"></div>',
+  '      </div>',
   '    </div>',
   '  </section>',
+  '  <div class="home-section-slot" aria-hidden="true"></div>',
   '</div>',
 ].join('\n');

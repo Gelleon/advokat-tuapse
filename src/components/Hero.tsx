@@ -30,7 +30,7 @@ const Hero = () => {
   };
 
   return (
-    <section className="relative min-h-[90vh] flex items-center justify-center bg-primary overflow-hidden">
+    <section className="relative min-h-[90vh] flex items-start md:items-center justify-center bg-primary overflow-hidden">
       {/* Dynamic Premium Aurora Background Effect */}
       <div className="absolute inset-0 z-0 overflow-hidden bg-[#0f172a]">
         {/* Soft static glow on mobile; full aurora only from md+ to cut paint cost */}

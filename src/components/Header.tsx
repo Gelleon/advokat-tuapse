@@ -42,13 +42,13 @@ const Header = ({ solid = false }: HeaderProps) => {
   return (
     <>
       <header 
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+        className={`fixed top-0 left-0 right-0 z-50 min-h-[5rem] flex items-center transition-colors duration-500 ${
           isSolid 
-            ? 'bg-white/95 backdrop-blur-md shadow-premium py-4' 
-            : 'bg-transparent py-6'
+            ? 'bg-white/95 backdrop-blur-md shadow-premium' 
+            : 'bg-transparent'
         }`}
       >
-        <div className="container mx-auto px-6 max-w-7xl">
+        <div className="container mx-auto px-6 max-w-7xl w-full py-4">
           <div className="flex items-center justify-between">
             <Link to="/" className="flex items-center space-x-3">
               <Scale 
