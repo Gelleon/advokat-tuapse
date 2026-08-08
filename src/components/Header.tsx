@@ -5,9 +5,10 @@ import { Scale, Menu, X, Phone, MessageCircle } from 'lucide-react';
 
 interface HeaderProps {
   solid?: boolean;
+  heroEntry?: boolean;
 }
 
-const Header = ({ solid = false }: HeaderProps) => {
+const Header = ({ solid = false, heroEntry = false }: HeaderProps) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const isSolid = solid || isScrolled;
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -52,7 +53,10 @@ const Header = ({ solid = false }: HeaderProps) => {
       >
         <div className="container mx-auto px-6 max-w-7xl w-full py-4">
           <div className="flex items-center justify-between">
-            <Link to="/" className="flex items-center space-x-3">
+            <Link
+              to="/"
+              className={`flex items-center space-x-3${heroEntry ? ' animate-fade-in-up hero-enter-delay-1' : ''}`}
+            >
               <Scale 
                 className={`w-8 h-8 transition-colors duration-500 ${
                   isSolid ? 'text-primary' : 'text-white'

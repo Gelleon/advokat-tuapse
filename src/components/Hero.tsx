@@ -100,19 +100,19 @@ const Hero = () => {
 
       <div className="relative z-10 w-full text-center px-4 sm:px-6 max-w-5xl mx-auto pt-20">
         <div className="mb-10 md:max-w-[48rem] mx-auto">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-serif font-bold text-white mb-6 leading-tight tracking-tight">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-serif font-bold text-white mb-6 leading-tight tracking-tight animate-fade-in-up hero-enter-delay-1">
             Профессиональная юридическая защита{' '}
             <span className="block text-secondary mt-2">
               ваших интересов
             </span>
           </h1>
           
-          <p className="text-lg md:text-xl text-white/80 max-w-2xl mx-auto leading-relaxed font-light tracking-wide">
+          <p className="text-lg md:text-xl text-white/80 max-w-2xl mx-auto leading-relaxed font-light tracking-wide animate-fade-in-up hero-enter-delay-2">
             Комплексное правовое сопровождение бизнеса и частных лиц в Туапсе. Опыт, конфиденциальность, результат.
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center w-full max-w-md sm:max-w-none mx-auto">
+        <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center w-full max-w-md sm:max-w-none mx-auto animate-fade-in-up hero-enter-delay-3">
           <button
             onClick={() => setShowConsultationPopup(true)}
             className="group w-full sm:w-auto bg-secondary hover:bg-secondary-light text-primary px-6 sm:px-8 py-4 rounded-sm font-semibold tracking-wider uppercase text-xs sm:text-sm transition-all duration-300 flex items-center justify-center space-x-3"
