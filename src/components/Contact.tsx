@@ -22,7 +22,7 @@ const Contact = () => {
                   <Phone className="w-5 h-5" strokeWidth={1.5} />
                 </div>
                 <div>
-                  <h3 className="text-xs font-medium tracking-wider uppercase text-primary/50 mb-2">Телефон</h3>
+                  <h3 className="text-xs font-medium tracking-wider uppercase text-primary/70 mb-2">Телефон</h3>
                   <p className="text-xl font-serif text-primary mb-1">+7 (918) 048-61-12</p>
                 </div>
               </div>
@@ -32,7 +32,7 @@ const Contact = () => {
                   <Mail className="w-5 h-5" strokeWidth={1.5} />
                 </div>
                 <div>
-                  <h3 className="text-xs font-medium tracking-wider uppercase text-primary/50 mb-2">Email</h3>
+                  <h3 className="text-xs font-medium tracking-wider uppercase text-primary/70 mb-2">Email</h3>
                   <p className="text-xl font-serif text-primary mb-1">info@advokat-tuapse.ru</p>
                   <p className="text-sm text-primary/60 font-light">Ответим в течение 2 часов</p>
                 </div>
@@ -43,7 +43,7 @@ const Contact = () => {
                   <MapPin className="w-5 h-5" strokeWidth={1.5} />
                 </div>
                 <div>
-                  <h3 className="text-xs font-medium tracking-wider uppercase text-primary/50 mb-2">Офис</h3>
+                  <h3 className="text-xs font-medium tracking-wider uppercase text-primary/70 mb-2">Офис</h3>
                   <p className="text-xl font-serif text-primary mb-1">352800 г. Туапсе, ул. Тельмана, 2</p>
                   <p className="text-sm text-primary/60 font-light">Центр города, удобная парковка</p>
                 </div>
@@ -54,7 +54,7 @@ const Contact = () => {
                   <Clock className="w-5 h-5" strokeWidth={1.5} />
                 </div>
                 <div>
-                  <h3 className="text-xs font-medium tracking-wider uppercase text-primary/50 mb-2">Режим работы</h3>
+                  <h3 className="text-xs font-medium tracking-wider uppercase text-primary/70 mb-2">Режим работы</h3>
                   <p className="text-xl font-serif text-primary mb-1">Пн-Пт: 9:00 - 18:00</p>
                   <p className="text-xl font-serif text-primary">Сб: 9:00 - 13:00, Вс - выходной</p>
                 </div>

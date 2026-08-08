@@ -119,17 +119,25 @@ const Header = ({ solid = false }: HeaderProps) => {
             </div>
 
             <button 
+              type="button"
               className={`lg:hidden transition-colors duration-300 ${
                 isSolid ? 'text-primary' : 'text-white'
               }`}
               onClick={() => setIsMenuOpen(!isMenuOpen)}
+              aria-label={isMenuOpen ? 'Закрыть меню' : 'Открыть меню'}
+              aria-expanded={isMenuOpen}
+              aria-controls="mobile-navigation"
             >
-              {isMenuOpen ? <X className="w-6 h-6" strokeWidth={1.5} /> : <Menu className="w-6 h-6" strokeWidth={1.5} />}
+              {isMenuOpen ? (
+                <X className="w-6 h-6" strokeWidth={1.5} aria-hidden="true" />
+              ) : (
+                <Menu className="w-6 h-6" strokeWidth={1.5} aria-hidden="true" />
+              )}
             </button>
           </div>
 
           {isMenuOpen && (
-            <div className="lg:hidden mt-4 bg-white rounded-sm p-6 shadow-premium">
+            <div id="mobile-navigation" className="lg:hidden mt-4 bg-white rounded-sm p-6 shadow-premium">
               <nav className="flex flex-col space-y-6">
                 <Link to="/#services" className="text-primary font-medium tracking-wider uppercase text-sm hover:text-secondary transition-colors" onClick={() => setIsMenuOpen(false)}>
                   Услуги
@@ -168,10 +176,12 @@ const Header = ({ solid = false }: HeaderProps) => {
             <div className="flex items-center justify-between mb-8">
               <h3 className="text-2xl font-serif font-bold text-primary">Связаться с нами</h3>
               <button
+                type="button"
                 onClick={() => setShowConsultationPopup(false)}
                 className="text-primary/50 hover:text-primary transition-colors"
+                aria-label="Закрыть окно"
               >
-                <X className="w-6 h-6" strokeWidth={1.5} />
+                <X className="w-6 h-6" strokeWidth={1.5} aria-hidden="true" />
               </button>
             </div>
             

@@ -57,7 +57,7 @@ const Footer = () => {
           </div>
 
           <div>
-            <h4 className="text-xs font-medium tracking-widest uppercase text-white/40 mb-6">Услуги</h4>
+            <h4 className="text-xs font-medium tracking-widest uppercase text-white/60 mb-6">Услуги</h4>
             <div className="flex flex-col space-y-3">
               <Link to="/ugolovnye-dela" className="text-white/80 hover:text-secondary transition-colors font-light">Уголовные дела</Link>
               <Link to="/semeynye-spory" className="text-white/80 hover:text-secondary transition-colors font-light">Семейные споры</Link>
@@ -70,7 +70,7 @@ const Footer = () => {
 
           {/* Quick Links */}
           <div>
-            <h4 className="text-xs font-medium tracking-widest uppercase text-white/40 mb-6">Навигация</h4>
+            <h4 className="text-xs font-medium tracking-widest uppercase text-white/60 mb-6">Навигация</h4>
             <div className="flex flex-col space-y-4">
               <Link to="/#services" className="text-white/80 hover:text-secondary transition-colors font-light">Все услуги</Link>
               <Link to="/#portfolio" className="text-white/80 hover:text-secondary transition-colors font-light">Наши дела</Link>
@@ -81,7 +81,7 @@ const Footer = () => {
 
           {/* Contact Info */}
           <div>
-            <h4 className="text-xs font-medium tracking-widest uppercase text-white/40 mb-6">Контакты</h4>
+            <h4 className="text-xs font-medium tracking-widest uppercase text-white/60 mb-6">Контакты</h4>
             <div className="space-y-6">
               <div className="flex items-start space-x-4">
                 <Phone className="w-4 h-4 text-secondary mt-1" strokeWidth={1.5} />
@@ -107,14 +107,14 @@ const Footer = () => {
 
         <div className="border-t border-white/10 mt-16 pt-8">
           <div className="flex flex-col md:flex-row items-center justify-between">
-            <p className="text-white/40 text-sm font-light">
+            <p className="text-white/60 text-sm font-light">
               © {currentYear} Адвокаты Туапсе. Все права защищены.
             </p>
             <div className="flex space-x-6 mt-4 md:mt-0">
-              <Link to="/privacy" className="text-white/40 hover:text-white text-sm transition-colors font-light">
+              <Link to="/privacy" className="text-white/60 hover:text-white text-sm transition-colors font-light">
                 Политика конфиденциальности
               </Link>
-              <Link to="/terms" className="text-white/40 hover:text-white text-sm transition-colors font-light">
+              <Link to="/terms" className="text-white/60 hover:text-white text-sm transition-colors font-light">
                 Условия использования
               </Link>
             </div>

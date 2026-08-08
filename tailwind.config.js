@@ -9,9 +9,10 @@ export default {
           light: '#1F2937',
         },
         secondary: {
-          DEFAULT: '#C5A880', // Premium gold/bronze
+          DEFAULT: '#C5A880', // Premium gold/bronze (decorative)
           light: '#D4B895',
           dark: '#A3875E',
+          readable: '#6B5535', // WCAG AA on light backgrounds
         },
         surface: {
           DEFAULT: '#F9FAFB', // Off-white

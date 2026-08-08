@@ -71,7 +71,7 @@ const Services = () => {
 
                 <Link
                   to={`/${service.path}`}
-                  className="inline-flex items-center gap-2 text-xs tracking-wider uppercase text-primary/50 group-hover:text-secondary transition-colors"
+                  className="inline-flex items-center gap-2 text-xs tracking-wider uppercase text-primary/70 group-hover:text-secondary-readable transition-colors"
                 >
                   Подробнее
                   <ArrowRight className="w-3.5 h-3.5" strokeWidth={1.5} />

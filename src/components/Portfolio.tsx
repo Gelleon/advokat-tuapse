@@ -41,11 +41,21 @@ const Portfolio = () => {
           </div>
           
           <div className="flex gap-4">
-            <button onClick={() => scroll('left')} className="p-4 border border-primary/20 rounded-sm hover:border-secondary hover:text-secondary transition-colors text-primary">
-              <ChevronLeft className="w-6 h-6" strokeWidth={1.5} />
+            <button
+              type="button"
+              onClick={() => scroll('left')}
+              className="p-4 border border-primary/20 rounded-sm hover:border-secondary hover:text-secondary transition-colors text-primary"
+              aria-label="Прокрутить дела влево"
+            >
+              <ChevronLeft className="w-6 h-6" strokeWidth={1.5} aria-hidden="true" />
             </button>
-            <button onClick={() => scroll('right')} className="p-4 border border-primary/20 rounded-sm hover:border-secondary hover:text-secondary transition-colors text-primary">
-              <ChevronRight className="w-6 h-6" strokeWidth={1.5} />
+            <button
+              type="button"
+              onClick={() => scroll('right')}
+              className="p-4 border border-primary/20 rounded-sm hover:border-secondary hover:text-secondary transition-colors text-primary"
+              aria-label="Прокрутить дела вправо"
+            >
+              <ChevronRight className="w-6 h-6" strokeWidth={1.5} aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -67,7 +77,7 @@ const Portfolio = () => {
               onClick={() => openCaseModal(caseItem)}
             >
               <div className="flex items-center justify-between mb-6">
-                <span className="text-xs font-medium tracking-wider uppercase text-secondary">
+                <span className="text-xs font-medium tracking-wider uppercase text-secondary-readable">
                   {caseItem.category}
                 </span>
                 <Eye className="w-5 h-5 text-primary/30 group-hover:text-secondary transition-colors flex-shrink-0" strokeWidth={1.5} />
@@ -88,12 +98,13 @@ const Portfolio = () => {
                 </div>
                 {caseItem.pdfUrl && (
                   <button
+                    type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       window.open(`${BASE_URL}${caseItem.pdfUrl}`, '_blank', 'noopener,noreferrer');
                     }}
                     className="p-1 hover:bg-surface-dark rounded-sm transition-colors group/pdf"
-                    title="Посмотреть документ"
+                    aria-label="Посмотреть документ PDF"
                   >
                     <svg viewBox="0 0 48 48" className="w-10 h-10 transition-transform group-hover/pdf:scale-110" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M38 14L28 4H12C10.8954 4 10 4.89543 10 6V42C10 43.1046 10.8954 44 12 44H36C37.1046 44 38 43.1046 38 42V14Z" fill="#E53935"/>
@@ -114,14 +125,16 @@ const Portfolio = () => {
           <div className="bg-white rounded-sm max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-premium animate-modal-appear relative">
             <div className="p-10">
               <button 
+                type="button"
                 onClick={closeCaseModal}
                 className="absolute top-8 right-8 text-primary/50 hover:text-primary transition-colors"
+                aria-label="Закрыть окно"
               >
-                <span className="text-3xl font-light">×</span>
+                <span className="text-3xl font-light" aria-hidden="true">×</span>
               </button>
               
               <div className="mb-10 pr-12">
-                <span className="text-xs font-medium tracking-wider uppercase text-secondary mb-4 block">
+                <span className="text-xs font-medium tracking-wider uppercase text-secondary-readable mb-4 block">
                   {selectedCase.category}
                 </span>
                 <h3 className="text-3xl md:text-4xl font-serif font-bold text-primary leading-tight">

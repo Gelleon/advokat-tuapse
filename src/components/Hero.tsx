@@ -50,10 +50,12 @@ const Hero = () => {
             <div className="flex items-center justify-between mb-8">
               <h3 className="text-2xl font-serif font-bold text-primary">Связаться с нами</h3>
               <button
+                type="button"
                 onClick={() => setShowConsultationPopup(false)}
                 className="text-primary/50 hover:text-primary transition-colors"
+                aria-label="Закрыть окно"
               >
-                <X className="w-6 h-6" strokeWidth={1.5} />
+                <X className="w-6 h-6" strokeWidth={1.5} aria-hidden="true" />
               </button>
             </div>
             
