@@ -1,5 +1,18 @@
+import { createRequire } from 'node:module';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
+
+const require = createRequire(import.meta.url);
+const HOME_LCP_SHELL = require('./server/home-lcp-shell.cjs');
+
+function homeLcpShellPlugin(): Plugin {
+  return {
+    name: 'home-lcp-shell',
+    transformIndexHtml(html) {
+      return html.replace('<!-- HOME_LCP_SHELL -->', HOME_LCP_SHELL);
+    },
+  };
+}
 
 function asyncCssPlugin(): Plugin {
   return {
@@ -63,8 +76,8 @@ function optimizeLoadingPlugin(): Plugin {
 
         if (scriptTag) {
           result = result.replace(
-            '<div id="root"></div>',
-            `<div id="root"></div>\n    ${scriptTag}`
+            '<!-- Yandex.Metrika:',
+            `${scriptTag}\n    <!-- Yandex.Metrika:`
           );
         }
 
@@ -76,7 +89,7 @@ function optimizeLoadingPlugin(): Plugin {
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(), asyncCssPlugin(), optimizeLoadingPlugin()],
+  plugins: [react(), homeLcpShellPlugin(), asyncCssPlugin(), optimizeLoadingPlugin()],
   build: {
     target: 'es2020',
     modulePreload: { polyfill: false },

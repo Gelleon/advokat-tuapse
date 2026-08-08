@@ -171,7 +171,19 @@ function injectStaticBody(html, page) {
   ].join('\n    ');
 
   let result = html.replace(/\s*<main id="static-seo">[\s\S]*?<\/main>/, '');
-  return result.replace('<div id="root"></div>', `${block}\n    <div id="root"></div>`);
+
+  if (page.root) {
+    // Homepage LCP shell is already inside #root from the Vite build.
+    return result.replace(
+      /(<noscript><div><img src="https:\/\/mc\.yandex\.ru\/watch)/,
+      `${block}\n    $1`
+    );
+  }
+
+  return result.replace(
+    /<div id="root">[\s\S]*?<\/div>(?=\s*<script type="module")/,
+    `${block}\n    <div id="root"></div>`
+  );
 }
 
 function buildPageHtml(templateHtml, page) {
