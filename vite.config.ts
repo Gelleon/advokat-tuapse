@@ -47,32 +47,11 @@ function optimizeLoadingPlugin(): Plugin {
       handler(html) {
         const scriptTag =
           html.match(/<script type="module"[^>]*src="([^"]+)"[^>]*><\/script>/)?.[0] ?? '';
-        const scriptSrc = scriptTag.match(/src="([^"]+)"/)?.[1];
-        const modulePreloads = [
-          ...new Set(
-            [...html.matchAll(/<link rel="modulepreload"[^>]*>/g)].map((match) => match[0])
-          ),
-        ];
 
         let result = html
           .replace(/<link rel="preload" as="style"[^>]*>\s*/g, '')
           .replace(/<script type="module"[^>]*><\/script>\s*/g, '')
           .replace(/<link rel="modulepreload"[^>]*>\s*/g, '');
-
-        const vendorReact = modulePreloads.find((tag) => tag.includes('vendor-react'));
-        const vendorIcons = modulePreloads.find((tag) => tag.includes('vendor-icons'));
-        const entryPreload = scriptSrc
-          ? `<link rel="modulepreload" crossorigin href="${scriptSrc}">`
-          : '';
-
-        const earlyHints = [vendorReact, vendorIcons, entryPreload].filter(Boolean).join('\n    ');
-
-        if (earlyHints) {
-          result = result.replace(
-            /(<meta name="viewport"[^>]*>)/,
-            `$1\n    ${earlyHints}`
-          );
-        }
 
         if (scriptTag) {
           result = result.replace(

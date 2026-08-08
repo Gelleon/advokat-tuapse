@@ -4,11 +4,6 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/scales.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- Fallback meta; prerender-meta.cjs writes route-specific title/canonical at build time.
-         React Helmet updates these after hydrate for users in the browser. -->
-    <title>Адвокаты Туапсе | Профессиональные юридические услуги</title>
-    <meta name="description" content="Квалифицированная юридическая помощь в Туапсе. Арбитражные споры, защита бизнеса, семейное и наследственное право. Более 15 лет успешной практики." />
-    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large" />
     <style>#static-seo{display:none!important}</style>
     <style id="critical-css">
       @font-face{font-family:"Playfair Fallback";src:local(Georgia);size-adjust:108%;ascent-override:90%;descent-override:22%;line-gap-override:0%}
@@ -59,11 +54,19 @@
       .text-2xl{font-size:1.5rem;line-height:2rem}
       .justify-between{justify-content:space-between}
       h1,p{min-height:1px}
+      .fixed{position:fixed}
+      .top-0{top:0}
+      .left-0{left:0}
+      .right-0{right:0}
+      .z-50{z-index:50}
+      .py-6{padding-top:1.5rem;padding-bottom:1.5rem}
+      .lcp-h1{font-family:Georgia,"Times New Roman",serif}
     </style>
 
-    <!-- Self-hosted fonts: no render-blocking Google Fonts chain -->
-    <link rel="preload" href="/fonts/playfairdisplay-700-normal-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="preload" href="/fonts/inter-400-normal-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
+    <!-- Fallback meta; prerender-meta.cjs writes route-specific title/canonical at build time. -->
+    <title>Адвокаты Туапсе | Профессиональные юридические услуги</title>
+    <meta name="description" content="Квалифицированная юридическая помощь в Туапсе. Арбитражные споры, защита бизнеса, семейное и наследственное право. Более 15 лет успешной практики." />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large" />
     <link rel="stylesheet" href="/fonts/fonts.css" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="/fonts/fonts.css"></noscript>
     
