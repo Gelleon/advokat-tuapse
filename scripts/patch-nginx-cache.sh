@@ -98,7 +98,16 @@ fi
 
 if ! grep -q 'location \^~ /assets/' "$SITE"; then
   awk -v assets="$CACHE_ASSETS" -v fonts="$CACHE_FONTS" '
-    /^[[:space:]]*location \/ \{/ && !cache_done {
+    BEGIN { cache_done = 0 }
+    /^[[:space:]]*server[[:space:]]*\{/ {
+      listen_443 = 0
+      apex_name = 0
+      dist_root = 0
+    }
+    /listen[[:space:]]+443/ { listen_443 = 1 }
+    /server_name[[:space:]]+advokat-tuapse\.ru[[:space:]]*;/ { apex_name = 1 }
+    /^[[:space:]]*root[[:space:]]+.*advokat-tuapse\/dist[[:space:]]*;/ { dist_root = 1 }
+    /^[[:space:]]*location \/ \{/ && listen_443 && apex_name && dist_root && !cache_done {
       print assets
       print ""
       print fonts
@@ -107,6 +116,10 @@ if ! grep -q 'location \^~ /assets/' "$SITE"; then
     }
     { print }
   ' "$SITE" > "$SITE.cache.tmp" && mv "$SITE.cache.tmp" "$SITE"
+  if ! grep -q 'location \^~ /assets/' "$SITE"; then
+    echo "NGINX_CACHE_INSERT_FAILED"
+    exit 1
+  fi
   echo "NGINX_CACHE_PATCHED"
 else
   echo "NGINX_CACHE_ALREADY_OK"
@@ -126,10 +139,19 @@ DIST_ROOT="${DIST_ROOT:-/var/www/advokat-tuapse/dist}"
 SAMPLE_JS="$(find "$DIST_ROOT/assets" -maxdepth 1 -name '*.js' -type f 2>/dev/null | head -1 || true)"
 if [ -n "$SAMPLE_JS" ]; then
   SAMPLE_NAME="$(basename "$SAMPLE_JS")"
-  CACHE_HDR="$(curl -fsSI "https://advokat-tuapse.ru/assets/${SAMPLE_NAME}" | tr -d '\r' | grep -i '^cache-control:' || true)"
+  ASSET_URL="https://advokat-tuapse.ru/assets/${SAMPLE_NAME}"
+  CACHE_HDR="$(
+    curl -k -fsSI --resolve "advokat-tuapse.ru:443:127.0.0.1" "$ASSET_URL" 2>/dev/null \
+      | tr -d '\r' \
+      | grep -i '^cache-control:' \
+      || curl -fsSI "$ASSET_URL" 2>/dev/null | tr -d '\r' | grep -i '^cache-control:' \
+      || true
+  )"
   echo "CACHE_HEADER_ASSETS=${CACHE_HDR:-MISSING}"
   if ! echo "$CACHE_HDR" | grep -q 'max-age=31536000'; then
     echo "CACHE_VERIFY_FAILED"
+    curl -k -fsSI --resolve "advokat-tuapse.ru:443:127.0.0.1" "$ASSET_URL" 2>/dev/null | tr -d '\r' || true
+    nginx -T 2>/dev/null | grep -n -A4 'location \^~ /assets/' || true
     exit 1
   fi
   echo "CACHE_VERIFY_OK"
