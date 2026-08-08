@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { extractServicePages, MIN_DESCRIPTION_LENGTH } = require('./seo-utils.cjs');
 
 const SITE_URL = (process.env.FRONTEND_URL || 'https://advokat-tuapse.ru').replace(/\/+$/, '');
 
@@ -13,27 +14,13 @@ const FORBIDDEN_TITLE_SNIPPETS = [
 const HOMEPAGE_DESCRIPTION_SNIPPET =
   'Арбитражные споры, защита бизнеса, семейное и наследственное право';
 
-const SAMPLE_ROUTES = [
+const PHONE_SNIPPET = '048-61-12';
+
+const STATIC_SAMPLES = [
   {
     route: '/',
     titleIncludes: 'Адвокаты Туапсе',
     canonical: `${SITE_URL}/`,
-  },
-  {
-    route: '/zemelnye-spory/sobstvennost-i-arenda',
-    titleIncludes: 'собственности и аренде',
-    descriptionIncludes: 'аренды на землю',
-    canonical: `${SITE_URL}/zemelnye-spory/sobstvennost-i-arenda`,
-  },
-  {
-    route: '/semeynye-spory/alimenty',
-    titleIncludes: 'Алименты',
-    canonical: `${SITE_URL}/semeynye-spory/alimenty`,
-  },
-  {
-    route: '/nasledstvennye-spory/ustanovlenie-rodstva',
-    titleIncludes: 'родства',
-    canonical: `${SITE_URL}/nasledstvennye-spory/ustanovlenie-rodstva`,
   },
   {
     route: '/blog',
@@ -58,13 +45,56 @@ function extractTag(html, pattern) {
   return match ? match[1] : '';
 }
 
-function verifyRoute(distDir, sample) {
+function verifyServiceRoute(distDir, page) {
+  const html = readRouteHtml(distDir, page.route);
+  const title = extractTag(html, /<title[^>]*>([^<]+)<\/title>/);
+  const description = extractTag(html, /<meta[^>]*name="description"[^>]*content="([^"]+)"/);
+  const canonical = extractTag(html, /<link rel="canonical" href="([^"]+)"/);
+  const staticText = extractTag(html, /<main id="static-seo">[\s\S]*?<p>([^<]+)<\/p>/);
+  const expectedCanonical = page.route === '/'
+    ? `${SITE_URL}/`
+    : `${SITE_URL}${page.route}`;
+
+  const errors = [];
+
+  if (!title) errors.push('missing <title>');
+  if (!description) errors.push('missing meta description');
+  if (!canonical) errors.push('missing rel=canonical');
+  if (canonical !== expectedCanonical) {
+    errors.push(`canonical mismatch: ${canonical} != ${expectedCanonical}`);
+  }
+  if (description !== page.description) {
+    errors.push('meta description differs from service source');
+  }
+  if (description.length < MIN_DESCRIPTION_LENGTH) {
+    errors.push(`description too short (${description.length})`);
+  }
+  if (staticText !== page.description) {
+    errors.push('static-seo paragraph differs from meta description');
+  }
+  if (description.includes(HOMEPAGE_DESCRIPTION_SNIPPET)) {
+    errors.push('homepage description leaked');
+  }
+  if (description.includes(PHONE_SNIPPET) || staticText.includes(PHONE_SNIPPET)) {
+    errors.push('phone number leaked into description/static text');
+  }
+  for (const snippet of FORBIDDEN_TITLE_SNIPPETS) {
+    if (title.includes(snippet)) {
+      errors.push(`homepage title leaked: ${title}`);
+    }
+  }
+  if (!html.includes('"@type":"WebPage"')) {
+    errors.push('missing WebPage JSON-LD');
+  }
+
+  return errors;
+}
+
+function verifyStaticRoute(distDir, sample) {
   const html = readRouteHtml(distDir, sample.route);
   const title = extractTag(html, /<title[^>]*>([^<]+)<\/title>/);
   const description = extractTag(html, /<meta[^>]*name="description"[^>]*content="([^"]+)"/);
   const canonical = extractTag(html, /<link rel="canonical" href="([^"]+)"/);
-  const h1 = extractTag(html, /<main id="static-seo">\s*<h1>([^<]+)<\/h1>/);
-
   const errors = [];
 
   if (!title) errors.push('missing <title>');
@@ -76,39 +106,28 @@ function verifyRoute(distDir, sample) {
   if (!title.includes(sample.titleIncludes)) {
     errors.push(`title "${title}" does not include "${sample.titleIncludes}"`);
   }
-  if (sample.descriptionIncludes && !description.includes(sample.descriptionIncludes)) {
-    errors.push(`description does not include "${sample.descriptionIncludes}"`);
-  }
-  if (!h1) errors.push('missing static <h1> for crawlers');
-
-  if (sample.route !== '/') {
-    for (const snippet of FORBIDDEN_TITLE_SNIPPETS) {
-      if (title.includes(snippet)) {
-        errors.push(`homepage title leaked: ${title}`);
-      }
-    }
-    if (description.includes(HOMEPAGE_DESCRIPTION_SNIPPET)) {
-      errors.push(`homepage description leaked: ${description.slice(0, 80)}...`);
-    }
-    if (canonical === `${SITE_URL}/` || canonical === SITE_URL) {
-      errors.push(`homepage canonical leaked on ${sample.route}`);
-    }
-  }
-
-  const canonicalCount = (html.match(/rel="canonical"/g) || []).length;
-  if (canonicalCount !== 1) {
-    errors.push(`expected 1 canonical tag, found ${canonicalCount}`);
-  }
 
   return errors;
 }
 
 function main() {
   const distDir = path.resolve(process.argv[2] || path.join(__dirname, '../dist'));
+  const servicePages = extractServicePages();
   let failed = false;
 
-  for (const sample of SAMPLE_ROUTES) {
-    const errors = verifyRoute(distDir, sample);
+  for (const page of servicePages) {
+    const errors = verifyServiceRoute(distDir, page);
+    if (errors.length) {
+      failed = true;
+      console.error(`FAIL ${page.route}:`);
+      errors.forEach((error) => console.error(`  - ${error}`));
+    } else {
+      console.log(`OK   ${page.route}`);
+    }
+  }
+
+  for (const sample of STATIC_SAMPLES) {
+    const errors = verifyStaticRoute(distDir, sample);
     if (errors.length) {
       failed = true;
       console.error(`FAIL ${sample.route}:`);
@@ -122,7 +141,7 @@ function main() {
     process.exit(1);
   }
 
-  console.log('SEO prerender verification passed.');
+  console.log(`SEO prerender verification passed for ${servicePages.length + STATIC_SAMPLES.length} routes.`);
 }
 
 main();

@@ -84,8 +84,13 @@ const ServicePage = () => {
             </h1>
             <div className="w-16 h-px bg-secondary mb-8" />
             <p className="text-lg text-primary/80 font-light leading-relaxed mb-12">
-              {service.intro}
+              {service.metaDescription}
             </p>
+            {service.intro.trim() !== service.metaDescription.trim() && (
+              <p className="text-primary/80 font-light leading-relaxed mb-12 -mt-8">
+                {service.intro}
+              </p>
+            )}
 
             {service.children && service.children.length > 0 && (
               <section className="mb-14">
@@ -176,6 +181,7 @@ const ServicePage = () => {
                 </Link>
                 <a
                   href="tel:+79180486112"
+                  data-nosnippet
                   className="inline-flex items-center justify-center gap-2 px-6 py-3 border border-primary/20 text-primary hover:border-secondary hover:text-secondary transition-colors text-sm tracking-wider uppercase"
                 >
                   <Phone className="w-4 h-4" strokeWidth={1.5} />

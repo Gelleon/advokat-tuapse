@@ -83,7 +83,7 @@ const Footer = () => {
           <div>
             <h4 className="text-xs font-medium tracking-widest uppercase text-white/60 mb-6">Контакты</h4>
             <div className="space-y-6">
-              <div className="flex items-start space-x-4">
+              <div className="flex items-start space-x-4" data-nosnippet>
                 <Phone className="w-4 h-4 text-secondary mt-1" strokeWidth={1.5} />
                 <div>
                   <p className="text-white/90 font-medium">+7 (918) 048-61-12</p>

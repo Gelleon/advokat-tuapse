@@ -162,11 +162,13 @@ export function serviceSchema(options: {
 }) {
   const base = legalServiceSchema();
   return {
-    ...base,
+    '@context': 'https://schema.org',
+    '@type': 'Service',
     name: options.name,
     description: options.description,
     url: absoluteUrl(options.path),
     serviceType: options.name,
+    areaServed: base.areaServed,
     provider: {
       '@type': 'LegalService',
       name: SITE_NAME,

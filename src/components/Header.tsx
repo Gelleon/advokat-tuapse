@@ -100,7 +100,7 @@ const Header = ({ solid = false }: HeaderProps) => {
             </nav>
 
             <div className="hidden md:flex items-center space-x-6">
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2" data-nosnippet>
                 <Phone className={`w-4 h-4 ${isSolid ? 'text-primary' : 'text-white'}`} strokeWidth={1.5} />
                 <span className={`text-sm font-medium tracking-wider ${isSolid ? 'text-primary' : 'text-white'}`}>
                   +7 (918) 048-61-12
@@ -151,7 +151,7 @@ const Header = ({ solid = false }: HeaderProps) => {
                 <Link to="/#contact" className="text-primary font-medium tracking-wider uppercase text-sm hover:text-secondary transition-colors" onClick={() => setIsMenuOpen(false)}>
                   Контакты
                 </Link>
-                <div className="pt-6 border-t border-surface-dark">
+                <div className="pt-6 border-t border-surface-dark" data-nosnippet>
                   <div className="flex items-center space-x-2 text-sm text-primary mb-4">
                     <Phone className="w-4 h-4" strokeWidth={1.5} />
                     <span className="font-medium tracking-wider">+7 (918) 048-61-12</span>
