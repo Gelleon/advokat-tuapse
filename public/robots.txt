@@ -9,6 +9,10 @@ Allow: /
 
 User-agent: Yandex
 Allow: /
+Allow: /feed.yml
+Allow: /feed-images/
+Allow: /api/feed.yml
+Disallow: /api/
 
 Host: advokat-tuapse.ru
 Sitemap: https://advokat-tuapse.ru/sitemap.xml

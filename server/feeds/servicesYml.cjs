@@ -39,7 +39,6 @@ function pageUrl(baseUrl, routePath) {
 function generateServicesYml(baseUrl, options = {}) {
   const executor = { ...EXECUTOR, ...options.executor };
   const siteUrl = normalizeBaseUrl(baseUrl);
-  const pictureUrl = `${siteUrl}${executor.picturePath}`;
   const now = new Date();
   const dateStr = now.toISOString().slice(0, 19).replace('T', ' ');
 
@@ -73,8 +72,8 @@ function generateServicesYml(baseUrl, options = {}) {
     // Yandex requires http(s) URL here — tel: is rejected as invalid type.
     const phonePageUrl = `${siteUrl}/`;
     const orderLink = `${siteUrl}/`;
-    // Same image, unique URL per offer (Yandex forbids identical picture links).
-    const offerPictureUrl = `${pictureUrl}?offer=${offerId}`;
+    // Unique path per offer (Yandex image bot often skips ?query duplicates).
+    const offerPictureUrl = `${siteUrl}/feed-images/${offerId}.jpg`;
 
     xml += `      <offer id="${offerId}">\n`;
     xml += `        <name>${escapeXml(executor.name)}</name>\n`;
