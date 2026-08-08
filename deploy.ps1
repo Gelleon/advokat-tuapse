@@ -571,96 +571,90 @@ Run-Ssh "test -f $REMOTE_DIR/dist/sitemap.xml && head -n 1 $REMOTE_DIR/dist/site
 Run-Ssh "curl -fsS https://advokat-tuapse.ru/sitemap.xml | head -n 1 | grep -q '<?xml' && echo LIVE_SITEMAP_OK || (echo LIVE_SITEMAP_IS_HTML; exit 1)"
 
 # Nginx: SEO try_files + gzip + long-cache для /assets и /fonts
-$nginxSite = '/etc/nginx/sites-available/advokat'
-$nginxEnabled = '/etc/nginx/sites-enabled/advokat'
-$nginxPatch = @"
+# Скрипт уходит на сервер через base64, иначе ssh съедает двойные кавычки.
+$nginxPatchScript = @'
 set -e
-SITE='$nginxSite'
-ENABLED='$nginxEnabled'
-if [ ! -f "`$SITE" ]; then
+SITE='/etc/nginx/sites-available/advokat'
+ENABLED='/etc/nginx/sites-enabled/advokat'
+if [ ! -f "$SITE" ]; then
   echo NGINX_SITE_NOT_FOUND
   exit 0
 fi
 
 # SEO: убрать 301 на trailing slash
-if grep -q 'try_files `$uri `$uri/ /index.html' "`$SITE" && ! grep -q 'rewrite \^(.+)/\$ `$1 last' "`$SITE"; then
-  sed -i 's|try_files `$uri `$uri/ /index.html;|rewrite ^(.+)/$ `$1 last;\n        try_files `$uri/index.html `$uri /index.html;|' "`$SITE"
+if grep -q 'try_files $uri $uri/ /index.html' "$SITE" && ! grep -q 'rewrite ^(.+)/$ $1 last' "$SITE"; then
+  sed -i 's|try_files $uri $uri/ /index.html;|rewrite ^(.+)/$ $1 last;\n        try_files $uri/index.html $uri /index.html;|' "$SITE"
   echo NGINX_SEO_PATCHED
-elif grep -q 'try_files `$uri/index.html `$uri /index.html' "`$SITE"; then
+elif grep -q 'try_files $uri/index.html $uri /index.html' "$SITE"; then
   echo NGINX_SEO_ALREADY_OK
 else
   echo NGINX_SEO_MANUAL_REQUIRED
 fi
 
 # Gzip (если ещё нет)
-if ! grep -q 'gzip on;' "`$SITE"; then
-  python3 - <<'PY'
-from pathlib import Path
-path = Path("$nginxSite")
-text = path.read_text()
-needle = "client_max_body_size 20m;"
-block = """client_max_body_size 20m;
-
-    gzip on;
-    gzip_comp_level 5;
-    gzip_min_length 256;
-    gzip_proxied any;
-    gzip_vary on;
-    gzip_types
-        text/plain
-        text/css
-        text/xml
-        text/javascript
-        application/javascript
-        application/x-javascript
-        application/json
-        application/xml
-        image/svg+xml
-        font/woff2;"""
-if needle in text and "gzip on;" not in text:
-    path.write_text(text.replace(needle, block, 1))
-    print("NGINX_GZIP_PATCHED")
-else:
-    print("NGINX_GZIP_SKIP")
-PY
-else
+if grep -q 'gzip on;' "$SITE"; then
   echo NGINX_GZIP_ALREADY_OK
+elif grep -q 'client_max_body_size 20m;' "$SITE"; then
+  awk '
+    { print }
+    /client_max_body_size 20m;/ && !gzip_done {
+      print ""
+      print "    gzip on;"
+      print "    gzip_comp_level 5;"
+      print "    gzip_min_length 256;"
+      print "    gzip_proxied any;"
+      print "    gzip_vary on;"
+      print "    gzip_types"
+      print "        text/plain"
+      print "        text/css"
+      print "        text/xml"
+      print "        text/javascript"
+      print "        application/javascript"
+      print "        application/x-javascript"
+      print "        application/json"
+      print "        application/xml"
+      print "        image/svg+xml"
+      print "        font/woff2;"
+      gzip_done = 1
+    }
+  ' "$SITE" > "$SITE.perf.tmp" && mv "$SITE.perf.tmp" "$SITE"
+  echo NGINX_GZIP_PATCHED
+else
+  echo NGINX_GZIP_SKIP
 fi
 
 # Long-cache для /assets/ и /fonts/
-if ! grep -q 'location ^~ /assets/' "`$SITE"; then
-  python3 - <<'PY'
-from pathlib import Path
-path = Path("$nginxSite")
-text = path.read_text()
-marker = "    location / {"
-block = """    location ^~ /assets/ {
-        access_log off;
-        add_header Cache-Control "public, max-age=31536000, immutable" always;
-        try_files `$uri =404;
-    }
-
-    location ^~ /fonts/ {
-        access_log off;
-        add_header Cache-Control "public, max-age=31536000, immutable" always;
-        try_files `$uri =404;
-    }
-
-    location / {"""
-if marker in text and "location ^~ /assets/" not in text:
-    path.write_text(text.replace(marker, block, 1))
-    print("NGINX_CACHE_PATCHED")
-else:
-    print("NGINX_CACHE_SKIP")
-PY
-else
+if grep -q 'location ^~ /assets/' "$SITE"; then
   echo NGINX_CACHE_ALREADY_OK
+elif grep -q 'location / {' "$SITE"; then
+  awk '
+    /^[[:space:]]*location \/ \{/ && !cache_done {
+      print "    location ^~ /assets/ {"
+      print "        access_log off;"
+      print "        add_header Cache-Control \"public, max-age=31536000, immutable\" always;"
+      print "        try_files $uri =404;"
+      print "    }"
+      print ""
+      print "    location ^~ /fonts/ {"
+      print "        access_log off;"
+      print "        add_header Cache-Control \"public, max-age=31536000, immutable\" always;"
+      print "        try_files $uri =404;"
+      print "    }"
+      print ""
+      cache_done = 1
+    }
+    { print }
+  ' "$SITE" > "$SITE.perf.tmp" && mv "$SITE.perf.tmp" "$SITE"
+  echo NGINX_CACHE_PATCHED
+else
+  echo NGINX_CACHE_SKIP
 fi
 
-cp "`$SITE" "`$ENABLED"
+cp "$SITE" "$ENABLED"
 nginx -t && systemctl reload nginx && echo NGINX_RELOADED
-"@
-Run-Ssh $nginxPatch
+'@
+$nginxPatchB64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($nginxPatchScript))
+Run-Ssh "echo $nginxPatchB64 | base64 -d | bash"
 Run-Ssh "code=`$(curl -s -o /dev/null -w '%{http_code}' https://advokat-tuapse.ru/blog)`; test `"`$code`" = '200' && echo SEO_BLOG_200 || (echo SEO_BLOG_REDIRECT_OR_ERROR:`$code; exit 1)"
 Run-Ssh "code=`$(curl -s -o /dev/null -w '%{http_code}' https://advokat-tuapse.ru/zemelnye-spory/sobstvennost-i-arenda)`; test `"`$code`" = '200' && echo SEO_SERVICE_200 || (echo SEO_SERVICE_REDIRECT_OR_ERROR:`$code; exit 1)"
 
