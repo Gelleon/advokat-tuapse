@@ -10,6 +10,33 @@
     <meta name="description" content="Квалифицированная юридическая помощь в Туапсе. Арбитражные споры, защита бизнеса, семейное и наследственное право. Более 15 лет успешной практики." />
     <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large" />
     <style>#static-seo{display:none!important}</style>
+    <style id="critical-css">
+      *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+      html{overflow-x:hidden}
+      body{overflow-x:hidden;font-family:Inter,system-ui,sans-serif;background:#f9fafb;color:#111827;-webkit-font-smoothing:antialiased}
+      header{position:fixed;inset:0 0 auto 0;z-index:50}
+      .bg-primary{background-color:#111827}
+      .bg-surface{background-color:#f9fafb}
+      .min-h-screen{min-height:100vh}
+      .min-h-\[90vh\]{min-height:90vh}
+      .flex{display:flex}
+      .items-center{align-items:center}
+      .justify-center{justify-content:center}
+      .relative{position:relative}
+      .overflow-hidden{overflow:hidden}
+      .overflow-x-hidden{overflow-x:hidden}
+      .text-center{text-align:center}
+      .text-white{color:#fff}
+      .text-secondary{color:#c5a880}
+      .font-serif{font-family:"Playfair Display",Georgia,serif}
+      .font-bold{font-weight:700}
+      .w-full{width:100%}
+      .max-w-5xl{max-width:64rem}
+      .mx-auto{margin-left:auto;margin-right:auto}
+      .px-4{padding-left:1rem;padding-right:1rem}
+      .pt-20{padding-top:5rem}
+      .leading-tight{line-height:1.25}
+    </style>
 
     <!-- Self-hosted fonts: no render-blocking Google Fonts chain -->
     <link rel="preload" href="/fonts/playfairdisplay-700-normal-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
@@ -26,7 +53,12 @@
       gtag('config', 'G-XXXXXXXXXX');
     </script> -->
 
-    <!-- Yandex.Metrika: load on first interaction to keep homepage JS lean -->
+  </head>
+  <body>
+    <noscript><div><img src="https://mc.yandex.ru/watch/110821169" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <!-- Yandex.Metrika: end of body — does not extend the critical request chain -->
     <script type="text/javascript">
       (function () {
         var loaded = false;
@@ -60,11 +92,5 @@
         });
       })();
     </script>
-    <!-- /Yandex.Metrika counter -->
-  </head>
-  <body>
-    <noscript><div><img src="https://mc.yandex.ru/watch/110821169" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

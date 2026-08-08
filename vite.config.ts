@@ -1,11 +1,85 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
+
+function asyncCssPlugin(): Plugin {
+  return {
+    name: 'async-css',
+    apply: 'build',
+    transformIndexHtml(html) {
+      return html.replace(
+        /<link rel="stylesheet"([^>]*?)href="([^"]+\.css)"([^>]*?)>/g,
+        (match, before, href, after) => {
+          if (href.includes('/fonts/')) {
+            return match;
+          }
+
+          // No rel=preload: keeps CSS off the high-priority critical chain.
+          // Inline critical-css in index.html covers first paint.
+          return [
+            `<link rel="stylesheet" href="${href}"${before}${after} media="print" onload="this.media='all'">`,
+            `<noscript><link rel="stylesheet" href="${href}"${before}${after}></noscript>`,
+          ].join('\n    ');
+        }
+      );
+    },
+  };
+}
+
+function optimizeLoadingPlugin(): Plugin {
+  return {
+    name: 'optimize-loading',
+    apply: 'build',
+    transformIndexHtml: {
+      order: 'post',
+      handler(html) {
+        const scriptTag =
+          html.match(/<script type="module"[^>]*src="([^"]+)"[^>]*><\/script>/)?.[0] ?? '';
+        const scriptSrc = scriptTag.match(/src="([^"]+)"/)?.[1];
+        const modulePreloads = [
+          ...new Set(
+            [...html.matchAll(/<link rel="modulepreload"[^>]*>/g)].map((match) => match[0])
+          ),
+        ];
+
+        let result = html
+          .replace(/<link rel="preload" as="style"[^>]*>\s*/g, '')
+          .replace(/<script type="module"[^>]*><\/script>\s*/g, '')
+          .replace(/<link rel="modulepreload"[^>]*>\s*/g, '');
+
+        const vendorReact = modulePreloads.find((tag) => tag.includes('vendor-react'));
+        const vendorIcons = modulePreloads.find((tag) => tag.includes('vendor-icons'));
+        const entryPreload = scriptSrc
+          ? `<link rel="modulepreload" crossorigin href="${scriptSrc}">`
+          : '';
+
+        const earlyHints = [vendorReact, vendorIcons, entryPreload].filter(Boolean).join('\n    ');
+
+        if (earlyHints) {
+          result = result.replace(
+            /(<meta name="viewport"[^>]*>)/,
+            `$1\n    ${earlyHints}`
+          );
+        }
+
+        if (scriptTag) {
+          result = result.replace(
+            '<div id="root"></div>',
+            `<div id="root"></div>\n    ${scriptTag}`
+          );
+        }
+
+        return result;
+      },
+    },
+  };
+}
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), asyncCssPlugin(), optimizeLoadingPlugin()],
   build: {
     target: 'es2020',
+    modulePreload: { polyfill: false },
     cssCodeSplit: true,
     rollupOptions: {
       output: {
