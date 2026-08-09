@@ -42,14 +42,22 @@ fi
 
 echo "NGINX_SITE=$SITE"
 
-# SEO: убрать 301 на trailing slash
-if grep -q 'try_files $uri $uri/ /index.html' "$SITE" && ! grep -q 'rewrite ^(.+)/$ $1 last' "$SITE"; then
-  sed -i 's|try_files $uri $uri/ /index.html;|rewrite ^(.+)/$ $1 last;\n        try_files $uri/index.html $uri /index.html;|' "$SITE"
-  echo "NGINX_SEO_PATCHED"
+# SEO: убрать 301 на trailing slash ($uri/ в try_files)
+if grep -qE 'try_files \$uri \$uri/' "$SITE"; then
+  sed -i 's|try_files $uri $uri/ /index.html;|rewrite ^(.+)/$ $1 last;\n        try_files $uri/index.html $uri /index.html;|g' "$SITE"
+  echo "NGINX_SEO_PATCHED_TRAILING_SLASH"
 elif grep -q 'try_files $uri/index.html $uri /index.html' "$SITE"; then
   echo "NGINX_SEO_ALREADY_OK"
 else
   echo "NGINX_SEO_MANUAL_REQUIRED"
+fi
+
+if ! grep -q 'absolute_redirect off' "$SITE"; then
+  sed -i '/ssl_dhparam.*ssl-dhparams/a\
+\
+    absolute_redirect off;\
+    server_name_in_redirect off;' "$SITE"
+  echo "NGINX_REDIRECT_HEADERS_PATCHED"
 fi
 
 # Gzip (если ещё нет)

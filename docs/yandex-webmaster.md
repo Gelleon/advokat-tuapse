@@ -73,11 +73,15 @@ node server/scripts/yandex-recrawl.cjs --dry-run
 
 ```nginx
 rewrite ^(.+)/$ $1 last;
-try_files $uri $uri/index.html /index.html;
+try_files $uri/index.html $uri /index.html;
 ```
+
+**Не используйте** `try_files $uri $uri/ /index.html` — `$uri/` даёт **301** на URL со слэшем.
+
+После деплоя выполните `npm run build` на сервере: prerender удаляет устаревшие `/blog/{slug}/`, AI-рерайт **не меняет slug** (стабильные URL).
 
 ```bash
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-Без этого Яндекс видит редирект `/blog` → `/blog/`, а canonical без слэша — страницы помечаются как «дубли» главной.
+Без правильного nginx Яндекс видит 301 на `/blog/статья` → `/blog/статья/` или наоборот. Запросите переобход URL блога в Вебмастере.

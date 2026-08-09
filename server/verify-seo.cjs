@@ -2,6 +2,8 @@
 
 const fs = require('fs');
 const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
+const { PrismaClient } = require('@prisma/client');
 const { extractServicePages, MIN_DESCRIPTION_LENGTH } = require('./seo-utils.cjs');
 
 const SITE_URL = (process.env.FRONTEND_URL || 'https://advokat-tuapse.ru').replace(/\/+$/, '');
@@ -103,19 +105,39 @@ function verifyStaticRoute(distDir, sample) {
   if (canonical !== sample.canonical) {
     errors.push(`canonical mismatch: ${canonical} != ${sample.canonical}`);
   }
-  if (!title.includes(sample.titleIncludes)) {
+  if (sample.titleIncludes && !title.includes(sample.titleIncludes)) {
     errors.push(`title "${title}" does not include "${sample.titleIncludes}"`);
   }
 
   return errors;
 }
 
-function main() {
+function verifyBlogRoute(distDir, post) {
+  const route = `/blog/${post.slug}`;
+  const expectedCanonical = `${SITE_URL}${route}`;
+  const errors = verifyStaticRoute(distDir, {
+    route,
+    canonical: expectedCanonical,
+  });
+
+  const html = readRouteHtml(distDir, route);
+  const title = extractTag(html, /<title[^>]*>([^<]+)<\/title>/);
+  const expectedTitle = post.metaTitle || `${post.title} | Адвокаты Туапсе`;
+  if (title !== expectedTitle) {
+    errors.push('blog title mismatch with database');
+  }
+
+  return errors;
+}
+
+async function main() {
   const distDir = path.resolve(process.argv[2] || path.join(__dirname, '../dist'));
   const servicePages = extractServicePages();
   let failed = false;
+  let checked = 0;
 
   for (const page of servicePages) {
+    checked += 1;
     const errors = verifyServiceRoute(distDir, page);
     if (errors.length) {
       failed = true;
@@ -127,6 +149,7 @@ function main() {
   }
 
   for (const sample of STATIC_SAMPLES) {
+    checked += 1;
     const errors = verifyStaticRoute(distDir, sample);
     if (errors.length) {
       failed = true;
@@ -137,11 +160,40 @@ function main() {
     }
   }
 
+  const prisma = new PrismaClient();
+  try {
+    const posts = await prisma.post.findMany({
+      where: { status: 'PUBLISHED' },
+      select: {
+        slug: true,
+        title: true,
+        metaTitle: true,
+      },
+    });
+
+    for (const post of posts) {
+      checked += 1;
+      const errors = verifyBlogRoute(distDir, post);
+      if (errors.length) {
+        failed = true;
+        console.error(`FAIL /blog/${post.slug}:`);
+        errors.forEach((error) => console.error(`  - ${error}`));
+      } else {
+        console.log(`OK   /blog/${post.slug}`);
+      }
+    }
+  } finally {
+    await prisma.$disconnect();
+  }
+
   if (failed) {
     process.exit(1);
   }
 
-  console.log(`SEO prerender verification passed for ${servicePages.length + STATIC_SAMPLES.length} routes.`);
+  console.log(`SEO prerender verification passed for ${checked} routes.`);
 }
 
-main();
+main().catch((error) => {
+  console.error('SEO verification failed:', error);
+  process.exit(1);
+});

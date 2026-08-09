@@ -691,7 +691,8 @@ export async function rewriteBlogDraft(postId: string): Promise<BlogAgentResult>
     where: { id: postId },
     data: {
       title: article.title,
-      slug: await ensureUniqueSlug(article.slug || slugify(article.title), postId),
+      // Keep URL stable after rewrite — changing slug causes 301/404 in Yandex.
+      slug: post.slug,
       previewText: article.previewText || article.metaDescription || article.title,
       content: article.content,
       tags: JSON.stringify(tags),

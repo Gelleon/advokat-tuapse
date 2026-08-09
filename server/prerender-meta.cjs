@@ -206,6 +206,18 @@ function writeRouteHtml(distDir, templateHtml, page) {
   fs.writeFileSync(path.join(outDir, 'index.html'), html, 'utf8');
 }
 
+/** Remove stale /blog/{slug}/ prerender dirs so old URLs do not linger after slug changes. */
+function cleanBlogPrerenderDirs(distDir) {
+  const blogDir = path.join(distDir, 'blog');
+  if (!fs.existsSync(blogDir)) return;
+
+  for (const entry of fs.readdirSync(blogDir, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      fs.rmSync(path.join(blogDir, entry.name), { recursive: true, force: true });
+    }
+  }
+}
+
 async function main() {
   const distDir = path.resolve(process.argv[2] || path.join(__dirname, '../dist'));
   const templatePath = path.join(distDir, 'index.html');
@@ -244,6 +256,8 @@ async function main() {
   } finally {
     await prisma.$disconnect();
   }
+
+  cleanBlogPrerenderDirs(distDir);
 
   for (const page of pages) {
     writeRouteHtml(distDir, templateHtml, page);
