@@ -1,8 +1,9 @@
 import './index.css';
-import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigationType } from 'react-router-dom';
 import Home from './pages/Home';
 import { API_URL } from './config';
+import { isValidServicePath } from './data/services';
 
 const HelmetProvider = lazy(() =>
   import('react-helmet-async').then((module) => ({ default: module.HelmetProvider }))
@@ -55,45 +56,55 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+const scrollToElement = (id: string) => {
+  const el = document.getElementById(id);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth' });
+    return true;
+  }
+  return false;
+};
+
+const isServicePath = (pathname: string) => {
+  const normalized = pathname.replace(/^\/+|\/+$/g, '');
+  if (!normalized) return false;
+  const [areaSlug, topicSlug] = normalized.split('/');
+  return isValidServicePath(areaSlug, topicSlug);
+};
+
 const ScrollToTop = () => {
   const { pathname, hash } = useLocation();
+  const navigationType = useNavigationType();
+  const prevPathnameRef = useRef(pathname);
 
   useEffect(() => {
-    const resetScroll = () => {
-      window.scrollTo(0, 0);
-    };
+    const prevPathname = prevPathnameRef.current;
+    prevPathnameRef.current = pathname;
 
-    const handlePageShow = (event: PageTransitionEvent) => {
-      if (event.persisted) {
-        resetScroll();
-      }
-    };
-
-    window.addEventListener('pageshow', handlePageShow);
-    return () => window.removeEventListener('pageshow', handlePageShow);
-  }, []);
-
-  useEffect(() => {
     if (hash) {
       const id = hash.replace('#', '');
-      const scrollToHash = () => {
-        const el = document.getElementById(id);
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth' });
-          return true;
-        }
-        return false;
-      };
+      if (!scrollToElement(id)) {
+        const timer = setTimeout(() => scrollToElement(id), 100);
+        return () => clearTimeout(timer);
+      }
+      return;
+    }
 
-      if (!scrollToHash()) {
-        const timer = setTimeout(scrollToHash, 100);
+    const cameBackFromService =
+      pathname === '/' &&
+      navigationType === 'POP' &&
+      isServicePath(prevPathname);
+
+    if (cameBackFromService) {
+      if (!scrollToElement('services')) {
+        const timer = setTimeout(() => scrollToElement('services'), 100);
         return () => clearTimeout(timer);
       }
       return;
     }
 
     window.scrollTo(0, 0);
-  }, [pathname, hash]);
+  }, [pathname, hash, navigationType]);
 
   return null;
 };

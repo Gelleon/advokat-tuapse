@@ -14,7 +14,7 @@ const ICONS: Record<ServiceIconId, React.ComponentType<{ className?: string; str
 
 const Services = () => {
   return (
-    <section id="services" className="py-32 bg-surface">
+    <section id="services" className="py-32 bg-surface scroll-mt-28">
       <div className="container mx-auto px-6 max-w-7xl">
         <div className="mb-20 max-w-2xl">
           <h2 className="text-4xl md:text-5xl font-serif font-bold text-primary mb-6">
