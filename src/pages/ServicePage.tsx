@@ -1,5 +1,4 @@
 import React from 'react';
-import '../styles/service.css';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { ArrowRight, Phone } from 'lucide-react';
 import Seo from '../components/Seo';

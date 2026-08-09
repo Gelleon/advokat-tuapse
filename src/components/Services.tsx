@@ -16,16 +16,13 @@ const Services = () => {
   return (
     <section id="services" className="py-32 bg-surface">
       <div className="container mx-auto px-6 max-w-7xl">
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-20 gap-8">
-          <div className="max-w-2xl">
-            <h2 className="text-4xl md:text-5xl font-serif font-bold text-primary mb-6">
-              Специализация
-            </h2>
-            <p className="text-lg text-primary/70 leading-relaxed font-light">
-              Мы предоставляем комплексные правовые решения, опираясь на глубокую экспертизу и многолетнюю практику в ключевых отраслях права.
-            </p>
-          </div>
-          <div className="hidden md:block w-24 h-px bg-secondary"></div>
+        <div className="mb-20 max-w-2xl">
+          <h2 className="text-4xl md:text-5xl font-serif font-bold text-primary mb-6">
+            Специализация
+          </h2>
+          <p className="text-lg text-primary/70 leading-relaxed font-light">
+            Мы предоставляем комплексные правовые решения, опираясь на глубокую экспертизу и многолетнюю практику в ключевых отраслях права.
+          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">

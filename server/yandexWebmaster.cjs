@@ -93,9 +93,25 @@ async function queueRecrawl(userId, hostId, url) {
   });
 }
 
+async function getHostSummary(userId, hostId) {
+  return apiRequest(`/user/${userId}/hosts/${hostId}/summary`);
+}
+
+async function getInSearchHistory(userId, hostId, query = {}) {
+  const params = new URLSearchParams();
+  if (query.date_from) params.set('date_from', query.date_from);
+  if (query.date_to) params.set('date_to', query.date_to);
+  const qs = params.toString();
+  return apiRequest(
+    `/user/${userId}/hosts/${hostId}/search-urls/in-search/history${qs ? `?${qs}` : ''}`
+  );
+}
+
 module.exports = {
   getUserId,
   getHostId,
   getRecrawlQuota,
   queueRecrawl,
+  getHostSummary,
+  getInSearchHistory,
 };
