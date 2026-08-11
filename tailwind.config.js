@@ -5,9 +5,7 @@ export default {
     './src/**/*.{js,ts,jsx,tsx}',
     '!./src/pages/Blog.tsx',
     '!./src/pages/BlogPost.tsx',
-    '!./src/pages/Admin.tsx',
     '!./src/components/blog/**',
-    '!./src/components/admin/**',
     '!./src/components/LatestPosts.tsx',
   ],
   theme: {

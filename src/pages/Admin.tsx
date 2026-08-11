@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import '../styles/admin.css';
 import Seo from '../components/Seo';
 import { ArrowLeft, LogOut, Briefcase, FileText, Settings } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import '../styles/admin.css';
 import Seo from '../components/Seo';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Lock, ArrowLeft } from 'lucide-react';
