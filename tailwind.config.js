@@ -3,9 +3,6 @@ export default {
   content: [
     './index.html',
     './src/**/*.{js,ts,jsx,tsx}',
-    '!./src/pages/Blog.tsx',
-    '!./src/pages/BlogPost.tsx',
-    '!./src/components/blog/**',
     '!./src/components/LatestPosts.tsx',
   ],
   theme: {

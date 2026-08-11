@@ -70,7 +70,7 @@ const Header = ({ solid = false, heroEntry = false }: HeaderProps) => {
               </span>
             </Link>
 
-            <nav className="hidden lg:flex items-center space-x-8">
+            <nav className="site-header-nav items-center space-x-8">
               <Link 
                 to="/#services" 
                 className={`text-sm font-medium tracking-wider uppercase transition-colors duration-300 hover:text-secondary ${
@@ -105,7 +105,7 @@ const Header = ({ solid = false, heroEntry = false }: HeaderProps) => {
               </Link>
             </nav>
 
-            <div className="hidden md:flex items-center space-x-6">
+            <div className="site-header-actions items-center space-x-6">
               <div className="flex items-center space-x-2" data-nosnippet>
                 <Phone className={`w-4 h-4 ${isSolid ? 'text-primary' : 'text-white'}`} strokeWidth={1.5} />
                 <span className={`text-sm font-medium tracking-wider ${isSolid ? 'text-primary' : 'text-white'}`}>
@@ -126,7 +126,7 @@ const Header = ({ solid = false, heroEntry = false }: HeaderProps) => {
 
             <button 
               type="button"
-              className={`lg:hidden transition-colors duration-300 ${
+              className={`site-header-menu-btn transition-colors duration-300 ${
                 isSolid ? 'text-primary' : 'text-white'
               }`}
               onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -143,7 +143,7 @@ const Header = ({ solid = false, heroEntry = false }: HeaderProps) => {
           </div>
 
           {isMenuOpen && (
-            <div id="mobile-navigation" className="lg:hidden mt-4 bg-white rounded-sm p-6 shadow-premium">
+            <div id="mobile-navigation" className="site-header-mobile-nav mt-4 bg-white rounded-sm p-6 shadow-premium">
               <nav className="flex flex-col space-y-6">
                 <Link to="/#services" className="text-primary font-medium tracking-wider uppercase text-sm hover:text-secondary transition-colors" onClick={() => setIsMenuOpen(false)}>
                   Услуги

@@ -129,11 +129,40 @@ const AppRoutes = () => (
   </Suspense>
 );
 
+const MAIN_STYLE_HINTS = ['/assets/index-', '/fonts/fonts.css'];
+
+const purgeOrphanRouteStyles = () => {
+  document.querySelectorAll('link[rel="stylesheet"]').forEach((link) => {
+    const href = link.getAttribute('href') ?? '';
+    if (!href.includes('/assets/') && !href.includes('/fonts/')) return;
+    if (MAIN_STYLE_HINTS.some((hint) => href.includes(hint))) return;
+    link.remove();
+  });
+};
+
 const AppWithOptionalHelmet = () => {
   const { pathname } = useLocation();
+  const needsHelmet = pathname !== '/';
+  const [helmetActive, setHelmetActive] = useState(needsHelmet);
 
-  if (pathname === '/') {
-    return <AppRoutes />;
+  useEffect(() => {
+    if (needsHelmet) {
+      setHelmetActive(true);
+    }
+  }, [needsHelmet]);
+
+  useEffect(() => {
+    purgeOrphanRouteStyles();
+  }, [pathname]);
+
+  const routes = (
+    <Suspense fallback={<RouteFallback />}>
+      <AppRoutes />
+    </Suspense>
+  );
+
+  if (!helmetActive) {
+    return routes;
   }
 
   return (

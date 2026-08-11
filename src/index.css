@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@import './styles/blog.css';
+
 @layer base {
   * {
     margin: 0;
@@ -40,6 +42,41 @@
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
+  }
+
+  /* Header layout: plain CSS so orphan route Tailwind bundles cannot hide nav */
+  .site-header-nav {
+    display: none;
+  }
+
+  .site-header-actions {
+    display: none;
+  }
+
+  .site-header-menu-btn {
+    display: block;
+  }
+
+  @media (min-width: 768px) {
+    .site-header-actions {
+      display: flex;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .site-header-nav {
+      display: flex;
+    }
+
+    .site-header-menu-btn {
+      display: none;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .site-header-mobile-nav {
+      display: none !important;
+    }
   }
 }
 

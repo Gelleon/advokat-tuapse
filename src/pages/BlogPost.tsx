@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import '../styles/blog.css';
 import Seo from '../components/Seo';
 import { articleSchema, breadcrumbSchema } from '../seo/schemas';
 import { useParams, Link } from 'react-router-dom';
