@@ -11,7 +11,7 @@ import path from 'path';
 import { createRequire } from 'module';
 import { PrismaClient } from '@prisma/client';
 
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 const require = createRequire(__filename);
 const { generateSitemapXml } = require('./sitemap.cjs');

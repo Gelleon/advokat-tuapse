@@ -25,6 +25,7 @@ import { slugify } from '../utils/slugify';
 import { sanitizeTags } from '../utils/tags';
 import { generateBlogCoverImage } from './imageGenerator';
 import { getChatModel } from './aiModel';
+import { buildRouterAiHttpError, requireRouterAiApiKey } from './routerAiKey';
 
 const prisma = new PrismaClient();
 
@@ -279,10 +280,7 @@ async function buildPrompt(area: PracticeArea, brief: string): Promise<string> {
 }
 
 async function callRouterAI(prompt: string): Promise<string> {
-  const apiKey = process.env.ROUTERAI_API_KEY;
-  if (!apiKey) {
-    throw new Error('ROUTERAI_API_KEY не настроен на сервере');
-  }
+  const apiKey = requireRouterAiApiKey();
 
   const model = await getChatModel();
   const controller = new AbortController();
@@ -311,7 +309,7 @@ async function callRouterAI(prompt: string): Promise<string> {
 
     if (!response.ok) {
       const errorData = await response.text();
-      throw new Error(`Ошибка ИИ-сервиса: ${response.status} ${errorData.slice(0, 300)}`);
+      throw new Error(buildRouterAiHttpError(response.status, errorData));
     }
 
     const data = await response.json();

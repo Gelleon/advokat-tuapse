@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { authenticateToken } from '../middleware/auth';
 import { generateBlogDraft, listPracticeAreasForApi, regeneratePostCover, rewriteBlogDraft } from '../services/blogAgent';
 import { getChatModel } from '../services/aiModel';
+import { buildRouterAiHttpError, requireRouterAiApiKey } from '../services/routerAiKey';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -24,10 +25,7 @@ router.post('/optimize', authenticateToken, async (req, res) => {
     const template = setting?.value || DEFAULT_PROMPT;
     const prompt = template.replace('{text}', text);
 
-    const apiKey = process.env.ROUTERAI_API_KEY;
-    if (!apiKey) {
-      return res.status(500).json({ error: 'ROUTERAI_API_KEY не настроен на сервере' });
-    }
+    const apiKey = requireRouterAiApiKey();
 
     const model = await getChatModel();
     console.log('Sending request to RouterAI...', model);
@@ -55,7 +53,10 @@ router.post('/optimize', authenticateToken, async (req, res) => {
     if (!response.ok) {
       const errorData = await response.text();
       console.error('AI API Error:', errorData);
-      return res.status(response.status).json({ error: 'Ошибка при запросе к ИИ сервису', details: errorData });
+      return res.status(response.status).json({
+        error: buildRouterAiHttpError(response.status, errorData),
+        details: errorData
+      });
     }
 
     const data = await response.json();

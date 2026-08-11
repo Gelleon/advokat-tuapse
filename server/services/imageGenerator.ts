@@ -8,6 +8,7 @@ import {
   renderImagePrompt
 } from '../data/imagePrompt';
 import { getChatModel, getImageModel } from './aiModel';
+import { requireRouterAiApiKey } from './routerAiKey';
 import { getImageAttemptsForModel, type ImageGenerationAttempt } from '../data/aiModels';
 
 const prisma = new PrismaClient();
@@ -40,10 +41,6 @@ function truncatePrompt(prompt: string, maxLen = 6000): string {
   const trimmed = prompt.trim();
   if (trimmed.length <= maxLen) return trimmed;
   return `${trimmed.slice(0, maxLen - 1)}…`;
-}
-
-function getApiKey(): string {
-  return (process.env.ROUTERAI_API_KEY || '').trim().replace(/^['"]|['"]$/g, '');
 }
 
 async function getImagePromptTemplate(): Promise<string> {
@@ -272,9 +269,14 @@ export async function generateBlogCoverImage(vars: {
   category: string;
   content?: string;
 }): Promise<CoverImageResult> {
-  const apiKey = getApiKey();
-  if (!apiKey) {
-    return { url: null, error: 'ROUTERAI_API_KEY не настроен на сервере' };
+  let apiKey: string;
+  try {
+    apiKey = requireRouterAiApiKey();
+  } catch (error) {
+    return {
+      url: null,
+      error: error instanceof Error ? error.message : 'ROUTERAI_API_KEY не настроен на сервере'
+    };
   }
 
   const articleExcerpt = buildArticleExcerpt({
