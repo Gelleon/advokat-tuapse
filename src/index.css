@@ -1,8 +1,8 @@
+@import './styles/blog.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import './styles/blog.css';
 
 @layer base {
   * {
