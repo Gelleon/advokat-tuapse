@@ -8,7 +8,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Post } from '../store/usePosts';
 import { API_URL, BASE_URL, absoluteUrl, SITE_NAME } from '../config';
 import VcPostCard from '../components/blog/VcPostCard';
-import { getTopicLabel, getVisibleTags } from '../components/blog/blogHelpers';
+import { getTopicLabel, getVisibleTags, extractOfficialSource, stripArticleSourceBlock } from '../components/blog/blogHelpers';
 
 const formatFullDate = (value?: string) => {
   if (!value) return '';
@@ -112,6 +112,8 @@ const BlogPost = () => {
   const author = post.author || SITE_NAME;
   const topic = getTopicLabel(post);
   const seoDescription = post.metaDescription || post.previewText;
+  const officialSource = extractOfficialSource(post.content, post.tags);
+  const articleHtml = stripArticleSourceBlock(post.content);
 
   return (
     <div className="min-h-screen bg-surface font-sans">
@@ -188,11 +190,21 @@ const BlogPost = () => {
               </figure>
             )}
 
-            <div
-              className="article-body mb-12"
-              itemProp="articleBody"
-              dangerouslySetInnerHTML={{ __html: post.content }}
-            />
+            <div className="article-body mb-12" itemProp="articleBody">
+              <div dangerouslySetInnerHTML={{ __html: articleHtml }} />
+              {officialSource && (
+                <p className="article-source">
+                  Оригинал закона:{' '}
+                  <a
+                    href={officialSource.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {officialSource.title}
+                  </a>
+                </p>
+              )}
+            </div>
 
             {visibleTags.length > 0 && (
               <div className="flex flex-wrap gap-2 pt-2" aria-label="Теги статьи">

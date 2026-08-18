@@ -352,12 +352,71 @@ function ensureMetaDescription(metaDescription: string, previewText: string, tit
   return `${base.slice(0, 157).replace(/\s+\S*$/, '')}…`;
 }
 
-/** Теги публикации: без pravo:, с каноническим направлением, без дублей */
-function buildPostTags(practiceAreaTitle: string, aiTags: string[] = []): string[] {
+/** Теги публикации: направление, теги ИИ и служебная метка источника */
+function buildPostTags(practiceAreaTitle: string, aiTags: string[] = [], sourceTag?: string): string[] {
   return sanitizeTags([
     practiceAreaTitle,
-    ...aiTags
-  ]).slice(0, 8);
+    ...aiTags,
+    sourceTag || ''
+  ]).slice(0, 9);
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function extractOfficialSourceFromHtml(content: string): { url: string; title: string } | null {
+  const block = content.match(
+    /<p[^>]*class=["'][^"']*article-source[^"']*["'][^>]*>[\s\S]*?<a[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/i
+  );
+  if (block?.[1]) {
+    const title = block[2].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    return { url: block[1], title: title || block[1] };
+  }
+
+  const pravo = content.match(/pravo\.gov\.ru\/document\/([0-9a-z]+)/i);
+  if (pravo) {
+    return {
+      url: getDocumentPublicUrl(pravo[1]),
+      title: 'Официальная публикация на pravo.gov.ru'
+    };
+  }
+
+  const consultant = content.match(/consultant\.ru\/law\/hotdocs\/(\d+)\.html/i);
+  if (consultant) {
+    return {
+      url: getConsultantPublicUrl(consultant[1]),
+      title: 'Документ на consultant.ru'
+    };
+  }
+
+  return null;
+}
+
+function sourceFromTags(tags: string[]): { url: string; title: string; sourceTag?: string } | null {
+  for (const tag of tags) {
+    const pravo = String(tag).match(/^pravo:([0-9a-z]+)$/i);
+    if (pravo) {
+      return {
+        url: getDocumentPublicUrl(pravo[1]),
+        title: 'Официальная публикация на pravo.gov.ru',
+        sourceTag: `pravo:${pravo[1]}`
+      };
+    }
+    const consultant = String(tag).match(/^consultant:(\d+)$/i);
+    if (consultant) {
+      return {
+        url: getConsultantPublicUrl(consultant[1]),
+        title: 'Документ на consultant.ru',
+        sourceTag: `consultant:${consultant[1]}`
+      };
+    }
+  }
+  return null;
 }
 
 function ensureLeadParagraph(content: string): string {
@@ -371,13 +430,13 @@ function ensureDisclaimer(content: string): string {
 }
 
 function appendSourceLink(content: string, sourceUrl: string, sourceTitle: string, sourceLabel: string): string {
-  if (!sourceUrl || content.includes(sourceUrl)) return content;
-  return `${content}<p class="article-source">${sourceLabel}: <a href="${sourceUrl}" target="_blank" rel="noopener noreferrer">${sourceTitle}</a></p>`;
-}
-
-function extractArticleSourceBlock(content: string): string | null {
-  const match = content.match(/<p class="article-source">[\s\S]*?<\/p>/i);
-  return match ? match[0] : null;
+  if (!sourceUrl) return content;
+  const withoutOld = content.replace(
+    /<p[^>]*class=["'][^"']*article-source[^"']*["'][^>]*>[\s\S]*?<\/p>/gi,
+    ''
+  );
+  const title = escapeHtml(sourceTitle || sourceUrl);
+  return `${withoutOld}<p class="article-source">${sourceLabel}: <a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">${title}</a></p>`;
 }
 
 function finalizeArticleContent(
@@ -385,16 +444,17 @@ function finalizeArticleContent(
   options?: { sourceUrl?: string; sourceTitle?: string; sourceLabel?: string; preserveSourceFrom?: string }
 ): string {
   let result = ensureLeadParagraph(content.trim());
+  const sourceLabel = options?.sourceLabel || 'Оригинал закона';
 
-  if (options?.preserveSourceFrom) {
-    const preserved = extractArticleSourceBlock(options.preserveSourceFrom);
-    if (preserved && !result.includes('class="article-source"')) {
-      result += preserved;
-    }
-  }
+  const preserved = options?.preserveSourceFrom
+    ? extractOfficialSourceFromHtml(options.preserveSourceFrom)
+    : null;
 
-  if (options?.sourceUrl && options.sourceTitle && options.sourceLabel) {
-    result = appendSourceLink(result, options.sourceUrl, options.sourceTitle, options.sourceLabel);
+  const sourceUrl = options?.sourceUrl || preserved?.url || '';
+  const sourceTitle = options?.sourceTitle || preserved?.title || sourceUrl;
+
+  if (sourceUrl) {
+    result = appendSourceLink(result, sourceUrl, sourceTitle, sourceLabel);
   }
 
   return ensureDisclaimer(result);
@@ -535,8 +595,12 @@ export async function generateBlogDraft(input: BlogAgentInput = {}): Promise<Blo
     throw new Error(`ИИ вернул неожиданный формат: ${parseErr?.message || 'parse error'}`);
   }
 
-  const tags = buildPostTags(picked.area.title, article.tags);
-  const sourceLabel = provider === 'consultant' ? 'Источник (КонсультантПлюс)' : 'Официальная публикация';
+  const tags = buildPostTags(
+    picked.area.title,
+    article.tags,
+    provider === 'consultant' ? `consultant:${picked.sourceId}` : `pravo:${picked.sourceId}`
+  );
+  const sourceLabel = 'Оригинал закона';
 
   article.content = finalizeArticleContent(article.content, {
     sourceUrl: picked.sourceUrl,
@@ -679,10 +743,16 @@ export async function rewriteBlogDraft(postId: string): Promise<BlogAgentResult>
   }
 
   // Сохраняем теги и автора — это метаданные, а не часть текста
-  const tags = buildPostTags(area.title, article.tags);
+  const existingTags = sanitizeTags(post.tags || '[]');
+  const fromHtml = extractOfficialSourceFromHtml(post.content);
+  const fromTags = sourceFromTags(existingTags);
+  const tags = buildPostTags(area.title, article.tags, fromTags?.sourceTag);
 
   article.content = finalizeArticleContent(article.content, {
-    preserveSourceFrom: post.content
+    preserveSourceFrom: post.content,
+    sourceUrl: fromHtml?.url || fromTags?.url,
+    sourceTitle: fromHtml?.title || fromTags?.title,
+    sourceLabel: 'Оригинал закона'
   });
 
   const updated = await prisma.post.update({
@@ -724,20 +794,23 @@ function buildRewriteBrief(post: {
   publishedAt: Date | null;
 }): string {
   const text = stripHtmlToText(post.content || '').slice(0, 4000);
+  const source = extractOfficialSourceFromHtml(post.content || '');
   return [
     'Задача: РЕРАЙТ уже опубликованной экспертной статьи блога по текущему шаблону.',
     'Не ищи новый документ — перепиши существующий текст заново по тем же правилам:',
     'lead → «О чем этот документ» → «Кого касается» → «Что означает на практике» → «Комментарий специалистов «Адвокаты Туапсе»» → aside с итогом.',
     'Это НЕ новость. Сохрани смысл, факты, ссылки и цифры. Измени формулировки и подачу.',
+    'Не включай в content блоки article-source и article-disclaimer — их добавит система.',
     '',
     `Текущий заголовок: ${post.title}`,
     `Текущее превью: ${post.previewText || ''}`,
     `Текущее meta description: ${post.metaDescription || ''}`,
     `Дата оригинала: ${post.publishedAt ? post.publishedAt.toISOString().slice(0, 10) : 'не указана'}`,
+    source ? `Ссылка на оригинал закона (обязательно сохранить): ${source.url}` : '',
     '',
     'Текст оригинальной статьи (для справки):',
     text || '(пусто)'
-  ].join('\n');
+  ].filter(Boolean).join('\n');
 }
 
 export function listPracticeAreasForApi() {

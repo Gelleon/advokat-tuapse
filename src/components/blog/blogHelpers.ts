@@ -10,7 +10,7 @@ const CANONICAL_BY_LOWER = new Map(
   CANONICAL_TOPICS.map((title) => [title.toLowerCase(), title] as const)
 );
 
-const HIDDEN_TAG_PREFIXES = ['pravo:'];
+const HIDDEN_TAG_PREFIXES = ['pravo:', 'consultant:'];
 const HIDDEN_TAG_EXACT = new Set(['изменения законодательства']);
 
 export const formatBlogDate = (value?: string) => {
@@ -86,6 +86,73 @@ export function postMatchesTopic(post: Post, selectedTopic: string): boolean {
   if (!selectedTopic || selectedTopic === 'Все') return true;
   const target = selectedTopic.trim().toLowerCase();
   return (post.tags || []).some((tag) => String(tag).trim().toLowerCase() === target);
+}
+
+export interface OfficialSourceLink {
+  url: string;
+  title: string;
+}
+
+const SOURCE_BLOCK_RE = /<p[^>]*class=["'][^"']*article-source[^"']*["'][^>]*>[\s\S]*?<\/p>/gi;
+const SOURCE_HREF_RE = /<p[^>]*class=["'][^"']*article-source[^"']*["'][^>]*>[\s\S]*?<a[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/i;
+const PRAVO_URL_RE = /https?:\/\/(?:publication\.)?pravo\.gov\.ru\/document\/([0-9a-z]+)/i;
+const CONSULTANT_URL_RE = /https?:\/\/(?:www\.)?consultant\.ru\/law\/hotdocs\/(\d+)\.html/i;
+
+function stripTags(value: string): string {
+  return value.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+export function sourceUrlFromTag(tag: string): OfficialSourceLink | null {
+  const pravo = tag.match(/^pravo:([0-9a-z]+)$/i);
+  if (pravo) {
+    return {
+      url: `http://publication.pravo.gov.ru/document/${pravo[1]}`,
+      title: 'Официальная публикация на pravo.gov.ru',
+    };
+  }
+  const consultant = tag.match(/^consultant:(\d+)$/i);
+  if (consultant) {
+    return {
+      url: `https://www.consultant.ru/law/hotdocs/${consultant[1]}.html`,
+      title: 'Документ на consultant.ru',
+    };
+  }
+  return null;
+}
+
+export function extractOfficialSource(html: string, tags: string[] = []): OfficialSourceLink | null {
+  const block = html.match(SOURCE_HREF_RE);
+  if (block?.[1]) {
+    const title = stripTags(block[2] || '') || 'Официальный документ';
+    return { url: block[1], title };
+  }
+
+  const pravo = html.match(PRAVO_URL_RE);
+  if (pravo) {
+    return {
+      url: `http://publication.pravo.gov.ru/document/${pravo[1]}`,
+      title: 'Официальная публикация на pravo.gov.ru',
+    };
+  }
+
+  const consultant = html.match(CONSULTANT_URL_RE);
+  if (consultant) {
+    return {
+      url: `https://www.consultant.ru/law/hotdocs/${consultant[1]}.html`,
+      title: 'Документ на consultant.ru',
+    };
+  }
+
+  for (const tag of tags) {
+    const fromTag = sourceUrlFromTag(tag);
+    if (fromTag) return fromTag;
+  }
+
+  return null;
+}
+
+export function stripArticleSourceBlock(html: string): string {
+  return html.replace(SOURCE_BLOCK_RE, '').trim();
 }
 
 export const getAuthorInitials = (author?: string) => {

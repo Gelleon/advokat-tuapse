@@ -380,12 +380,20 @@
     line-height: 1.65;
   }
 
-  .article-body .article-source {
+  .article-body .article-source,
+  .article-source {
     margin-top: 2.5rem;
     padding-top: 1.5rem;
     border-top: 1px solid #e5e7eb;
     font-size: 0.95rem;
     color: #6b7280;
+  }
+
+  .article-body .article-source a,
+  .article-source a {
+    color: #A3875E;
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 
   .article-body .article-disclaimer {

@@ -88,7 +88,7 @@ export function articleSchema(post: {
 
   const articleBody = stripHtml(post.content).slice(0, 5000);
   const keywords = (post.tags || [])
-    .filter((t) => t && !/^pravo:/i.test(t))
+    .filter((t) => t && !/^(pravo|consultant):/i.test(t))
     .join(', ');
 
   return {
