@@ -12,7 +12,7 @@ export function normalizeTagLabel(tag: string): string {
   return trimmed.charAt(0).toLocaleUpperCase('ru-RU') + trimmed.slice(1);
 }
 
-/** Сохраняет служебные pravo:/consultant: и обычные теги; убирает пустые и дубли */
+/** Сохраняет служебные pravo:/consultant:/rg: и обычные теги; убирает пустые и дубли */
 export function sanitizeTags(input: unknown): string[] {
   let list: unknown[] = [];
 
@@ -36,11 +36,13 @@ export function sanitizeTags(input: unknown): string[] {
     const raw = String(item || '').trim();
     if (!raw) continue;
 
-    const sourceMatch = raw.match(/^(pravo|consultant):(.+)$/i);
-    const label = sourceMatch
-      ? `${sourceMatch[1].toLowerCase()}:${sourceMatch[2].trim()}`
+    const sourceMatch = raw.match(/^(pravo|consultant|rg):(.+)$/i);
+    const sourceType = sourceMatch?.[1]?.toLowerCase();
+    const sourceValue = sourceMatch?.[2]?.trim();
+    const label = sourceType && sourceValue
+      ? `${sourceType}:${sourceValue}`
       : normalizeTagLabel(raw);
-    if (!label || (sourceMatch && !sourceMatch[2].trim())) continue;
+    if (!label || (sourceMatch && !sourceValue)) continue;
 
     const key = label.toLowerCase();
     if (seen.has(key)) continue;

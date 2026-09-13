@@ -69,14 +69,14 @@ node server/scripts/yandex-recrawl.cjs --dry-run
 
 ## 4. Nginx (обязательно после обновления)
 
-На сервере обновите конфиг из `nginx.example.conf` — важно убрать 301 на trailing slash:
+На сервере обновите конфиг из `nginx.example.conf` — важно оставить один канонический URL без trailing slash:
 
 ```nginx
-rewrite ^(.+)/$ $1 last;
+rewrite ^/(.+)/$ /$1 permanent;
 try_files $uri/index.html $uri /index.html;
 ```
 
-**Не используйте** `try_files $uri $uri/ /index.html` — `$uri/` даёт **301** на URL со слэшем.
+**Не используйте** `try_files $uri $uri/ /index.html` — `$uri/` может создавать дубли со слэшем. URL вида `/blog/статья/` должны отдавать 301 на `/blog/статья`.
 
 После деплоя выполните `npm run build` на сервере: prerender удаляет устаревшие `/blog/{slug}/`, AI-рерайт **не меняет slug** (стабильные URL).
 
@@ -84,4 +84,4 @@ try_files $uri/index.html $uri /index.html;
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-Без правильного nginx Яндекс видит 301 на `/blog/статья` → `/blog/статья/` или наоборот. Запросите переобход URL блога в Вебмастере.
+Без правильного nginx Яндекс и Google могут видеть `/blog/статья/` как дубль канонической страницы `/blog/статья`. После исправления запросите переобход URL блога в Вебмастере и Google Search Console.

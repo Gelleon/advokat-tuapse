@@ -44,6 +44,20 @@ const STATIC_PAGES = [
     h1: 'Условия использования',
     description: 'Пользовательское соглашение и условия использования сайта advokat-tuapse.ru',
   },
+  {
+    route: '/login',
+    title: 'Вход | Адвокаты Туапсе',
+    h1: 'Вход',
+    description: 'Вход в панель управления сайта «Адвокаты Туапсе».',
+    noindex: true,
+  },
+  {
+    route: '/admin',
+    title: 'Панель управления | Адвокаты Туапсе',
+    h1: 'Панель управления',
+    description: 'Административная панель сайта «Адвокаты Туапсе».',
+    noindex: true,
+  },
 ];
 
 function escapeHtml(value) {

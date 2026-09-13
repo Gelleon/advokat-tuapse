@@ -4,6 +4,7 @@ import { Trash2, Edit2, X, Image as ImageIcon, Calendar, Sparkles, Loader2, Send
 import { API_URL, BASE_URL } from '../../config';
 import { apiFetch } from '../../utils/api';
 import { PRACTICE_AREA_OPTIONS } from '../../data/practiceAreas';
+import { getVisibleTags, isHiddenTag } from '../blog/blogHelpers';
 
 const nowLocalInput = () => {
   const d = new Date();
@@ -33,6 +34,7 @@ const BlogAdmin = () => {
   };
 
   const [formData, setFormData] = useState<Partial<Post>>(initialFormState);
+  const [hiddenSourceTags, setHiddenSourceTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [thumbnailName, setThumbnailName] = useState('');
   const [existingThumbnailUrl, setExistingThumbnailUrl] = useState('');
@@ -92,6 +94,7 @@ const BlogAdmin = () => {
   };
 
   const handleEdit = (post: Post) => {
+    const allTags = post.tags || [];
     setEditingId(post.id);
     setFormData({
       title: post.title,
@@ -99,13 +102,14 @@ const BlogAdmin = () => {
       previewText: post.previewText,
       content: post.content,
       category: post.category,
-      tags: post.tags || [],
+      tags: getVisibleTags(allTags),
       author: post.author,
       status: post.status,
       publishedAt: post.publishedAt ? new Date(post.publishedAt).toISOString().slice(0, 16) : '',
       metaTitle: post.metaTitle,
       metaDescription: post.metaDescription,
     });
+    setHiddenSourceTags(allTags.filter((tag) => isHiddenTag(String(tag))));
     setThumbnailName(post.thumbnailUrl ? 'Изображение загружено' : '');
     setExistingThumbnailUrl(post.thumbnailUrl || '');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -114,6 +118,7 @@ const BlogAdmin = () => {
   const handleCancelEdit = () => {
     setEditingId(null);
     setFormData(initialFormState);
+    setHiddenSourceTags([]);
     setTagInput('');
     setThumbnailName('');
     setExistingThumbnailUrl('');
@@ -144,6 +149,7 @@ const BlogAdmin = () => {
       }
 
       const post = data.post as Post;
+      const allTags = post.tags || [];
       setEditingId(post.id);
       setFormData({
         title: post.title,
@@ -151,13 +157,14 @@ const BlogAdmin = () => {
         previewText: post.previewText,
         content: post.content,
         category: post.category || 'Отраслевые новости',
-        tags: post.tags || [],
+        tags: getVisibleTags(allTags),
         author: post.author || 'Адвокаты Туапсе',
         status: 'DRAFT',
         publishedAt: nowLocalInput(),
         metaTitle: post.metaTitle || '',
         metaDescription: post.metaDescription || ''
       });
+      setHiddenSourceTags(allTags.filter((tag) => isHiddenTag(String(tag))));
       setExistingThumbnailUrl(post.thumbnailUrl || '');
       setThumbnailName(post.thumbnailUrl ? 'AI-обложка сгенерирована' : '');
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -224,19 +231,21 @@ const BlogAdmin = () => {
     }
 
     const post = data.post as Post;
+    const allTags = post.tags || [];
     setFormData({
       title: post.title,
       slug: post.slug,
       previewText: post.previewText,
       content: post.content,
       category: post.category || 'Отраслевые новости',
-      tags: post.tags || [],
+      tags: getVisibleTags(allTags),
       author: post.author || formData.author || 'Адвокаты Туапсе',
       status: formData.status || 'DRAFT',
       publishedAt: post.publishedAt ? new Date(post.publishedAt).toISOString().slice(0, 16) : (formData.publishedAt || nowLocalInput()),
       metaTitle: post.metaTitle || '',
       metaDescription: post.metaDescription || ''
     });
+    setHiddenSourceTags(allTags.filter((tag) => isHiddenTag(String(tag))));
     setExistingThumbnailUrl(post.thumbnailUrl || '');
     setThumbnailName(post.thumbnailUrl ? 'Обложка сохранена' : '');
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -318,7 +327,7 @@ const handleRegenerateImage = async () => {
     form.append('previewText', formData.previewText || '');
     form.append('content', formData.content || '');
     form.append('category', formData.category || 'Отраслевые новости');
-    form.append('tags', JSON.stringify(formData.tags || []));
+    form.append('tags', JSON.stringify([...(formData.tags || []), ...hiddenSourceTags]));
     form.append('author', formData.author || '');
     form.append('status', status);
 

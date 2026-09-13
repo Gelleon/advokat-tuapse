@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '../.env') });
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const { PrismaClient } = require('@prisma/client');
 const { extractServicePages, MIN_DESCRIPTION_LENGTH } = require('./seo-utils.cjs');
 

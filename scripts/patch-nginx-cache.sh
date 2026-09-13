@@ -16,6 +16,11 @@ CACHE_FONTS='    location ^~ /fonts/ {
         try_files $uri =404;
     }'
 
+BLOG_ROUTES_404='    location ^~ /blog/ {
+        rewrite ^/(.+)/$ /$1 permanent;
+        try_files $uri/index.html =404;
+    }'
+
 find_site() {
   local candidate
   for candidate in \
@@ -42,14 +47,33 @@ fi
 
 echo "NGINX_SITE=$SITE"
 
-# SEO: убрать 301 на trailing slash ($uri/ в try_files)
+# SEO: один canonical URL без trailing slash
 if grep -qE 'try_files \$uri \$uri/' "$SITE"; then
-  sed -i 's|try_files $uri $uri/ /index.html;|rewrite ^(.+)/$ $1 last;\n        try_files $uri/index.html $uri /index.html;|g' "$SITE"
+  sed -i 's|try_files $uri $uri/ /index.html;|rewrite ^/(.+)/$ /$1 permanent;\n        try_files $uri/index.html $uri /index.html;|g' "$SITE"
   echo "NGINX_SEO_PATCHED_TRAILING_SLASH"
-elif grep -q 'try_files $uri/index.html $uri /index.html' "$SITE"; then
+elif grep -q 'rewrite ^(.+)/$ $1 last;' "$SITE"; then
+  sed -i 's|rewrite ^(.+)/$ $1 last;|rewrite ^/(.+)/$ /$1 permanent;|g' "$SITE"
+  echo "NGINX_SEO_REDIRECT_PATCHED"
+elif grep -q 'rewrite ^/(.+)/$ /$1 permanent;' "$SITE"; then
   echo "NGINX_SEO_ALREADY_OK"
+elif grep -q 'try_files $uri/index.html $uri /index.html' "$SITE"; then
+  echo "NGINX_SEO_MANUAL_REQUIRED"
 else
   echo "NGINX_SEO_MANUAL_REQUIRED"
+fi
+
+if ! grep -q 'location \^~ /blog/' "$SITE"; then
+  awk -v blog="$BLOG_ROUTES_404" '
+    /^[[:space:]]*location \/ \{/ && !blog_done {
+      print blog
+      print ""
+      blog_done = 1
+    }
+    { print }
+  ' "$SITE" > "$SITE.blog.tmp" && mv "$SITE.blog.tmp" "$SITE"
+  echo "NGINX_BLOG_404_PATCHED"
+else
+  echo "NGINX_BLOG_404_ALREADY_OK"
 fi
 
 if ! grep -q 'absolute_redirect off' "$SITE"; then

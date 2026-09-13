@@ -10,7 +10,7 @@ const CANONICAL_BY_LOWER = new Map(
   CANONICAL_TOPICS.map((title) => [title.toLowerCase(), title] as const)
 );
 
-const HIDDEN_TAG_PREFIXES = ['pravo:', 'consultant:'];
+const HIDDEN_TAG_PREFIXES = ['pravo:', 'consultant:', 'rg:'];
 const HIDDEN_TAG_EXACT = new Set(['изменения законодательства']);
 
 export const formatBlogDate = (value?: string) => {
@@ -115,6 +115,13 @@ export function sourceUrlFromTag(tag: string): OfficialSourceLink | null {
     return {
       url: `https://www.consultant.ru/law/hotdocs/${consultant[1]}.html`,
       title: 'Документ на consultant.ru',
+    };
+  }
+  const rg = tag.match(/^rg:(.+)$/i);
+  if (rg) {
+    return {
+      url: 'https://rg.ru/xml/index.xml',
+      title: 'Лента Российской газеты',
     };
   }
   return null;

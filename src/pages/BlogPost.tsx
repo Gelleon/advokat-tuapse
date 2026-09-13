@@ -194,7 +194,7 @@ const BlogPost = () => {
               <div dangerouslySetInnerHTML={{ __html: articleHtml }} />
               {officialSource && (
                 <p className="article-source">
-                  Оригинал закона:{' '}
+                  Источник материала:{' '}
                   <a
                     href={officialSource.url}
                     target="_blank"
