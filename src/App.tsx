@@ -53,10 +53,23 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+const getHeaderOffset = () => {
+  const header = document.querySelector('header');
+  const headerHeight = header instanceof HTMLElement ? header.offsetHeight : 0;
+
+  return headerHeight + 16;
+};
+
 const scrollToElement = (id: string) => {
   const el = document.getElementById(id);
   if (el) {
-    el.scrollIntoView({ behavior: 'smooth' });
+    const top = el.getBoundingClientRect().top + window.scrollY - getHeaderOffset();
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    window.scrollTo({
+      top: Math.max(top, 0),
+      behavior: prefersReducedMotion ? 'auto' : 'smooth',
+    });
     return true;
   }
   return false;
