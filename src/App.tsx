@@ -6,26 +6,6 @@ import Home from './pages/Home';
 import { API_URL } from './config';
 import { isValidServicePath } from './data/services';
 
-// #region debug-point shared:contact-anchor-scroll
-const reportDebugEvent = (hypothesisId: string, location: string, msg: string, data: Record<string, unknown>) => {
-  fetch('http://127.0.0.1:7777/event', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      sessionId: 'contact-anchor-scroll',
-      runId: 'post-fix',
-      hypothesisId,
-      location,
-      msg,
-      data,
-      ts: Date.now(),
-    }),
-  }).catch(() => {});
-};
-// #endregion
-
 const Admin = lazy(() => import('./pages/Admin'));
 const Login = lazy(() => import('./pages/Login'));
 const Blog = lazy(() => import('./pages/Blog'));
@@ -88,45 +68,10 @@ const scrollToElement = (id: string) => {
     const top = elementTop - headerOffset;
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    // #region debug-point B:scroll-target
-    reportDebugEvent('B', 'src/App.tsx:80', '[DEBUG] Calculated anchor target', {
-      targetId: id,
-      headerOffset,
-      elementTop,
-      scrollY: window.scrollY,
-      targetTop: Math.max(top, 0),
-      prefersReducedMotion,
-    });
-    // #endregion
-
     window.scrollTo({
       top: Math.max(top, 0),
       behavior: prefersReducedMotion ? 'auto' : 'smooth',
     });
-
-    window.setTimeout(() => {
-      const currentEl = document.getElementById(id);
-      // #region debug-point C:post-scroll-position
-      reportDebugEvent('C', 'src/App.tsx:94', '[DEBUG] Anchor position after scroll', {
-        targetId: id,
-        scrollY: window.scrollY,
-        targetViewportTop: currentEl?.getBoundingClientRect().top ?? null,
-        headerOffset: getHeaderOffset(),
-      });
-      // #endregion
-    }, 450);
-
-    window.setTimeout(() => {
-      const currentEl = document.getElementById(id);
-      // #region debug-point D:settled-scroll-position
-      reportDebugEvent('D', 'src/App.tsx:106', '[DEBUG] Anchor position after scroll settled', {
-        targetId: id,
-        scrollY: window.scrollY,
-        targetViewportTop: currentEl?.getBoundingClientRect().top ?? null,
-        headerOffset: getHeaderOffset(),
-      });
-      // #endregion
-    }, 1600);
     return true;
   }
   return false;
@@ -150,15 +95,6 @@ const ScrollToTop = () => {
 
     if (hash) {
       const id = hash.replace('#', '');
-      // #region debug-point A:hash-navigation
-      reportDebugEvent('A', 'src/App.tsx:116', '[DEBUG] Hash navigation detected', {
-        pathname,
-        hash,
-        navigationType,
-        prevPathname,
-        targetId: id,
-      });
-      // #endregion
       if (!scrollToElement(id)) {
         const timer = setTimeout(() => scrollToElement(id), 100);
         return () => clearTimeout(timer);
