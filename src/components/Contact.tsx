@@ -4,11 +4,11 @@ import { MAX_PROFILE_URL } from '../config';
 
 const Contact = () => {
   return (
-    <section id="contact" className="py-32 bg-white">
+    <section className="py-32 bg-white">
       <div className="container mx-auto px-6 max-w-7xl">
         <div className="flex flex-col lg:flex-row justify-between gap-16">
           <div className="lg:w-1/2">
-            <h2 className="text-4xl md:text-5xl font-serif font-bold text-primary mb-6">
+            <h2 id="contact" className="text-4xl md:text-5xl font-serif font-bold text-primary mb-6">
               Свяжитесь с нами
             </h2>
             <div className="w-16 h-px bg-secondary mb-8"></div>
