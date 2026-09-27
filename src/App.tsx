@@ -1,13 +1,10 @@
 import './index.css';
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigationType } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import Home from './pages/Home';
 import { API_URL } from './config';
 import { isValidServicePath } from './data/services';
-
-const HelmetProvider = lazy(() =>
-  import('react-helmet-async').then((module) => ({ default: module.HelmetProvider }))
-);
 
 const Admin = lazy(() => import('./pages/Admin'));
 const Login = lazy(() => import('./pages/Login'));
@@ -140,37 +137,17 @@ const purgeOrphanRouteStyles = () => {
   });
 };
 
-const AppWithOptionalHelmet = () => {
+const AppShell = () => {
   const { pathname } = useLocation();
-  const needsHelmet = pathname !== '/';
-  const [helmetActive, setHelmetActive] = useState(needsHelmet);
-
-  useEffect(() => {
-    if (needsHelmet) {
-      setHelmetActive(true);
-    }
-  }, [needsHelmet]);
 
   useEffect(() => {
     purgeOrphanRouteStyles();
   }, [pathname]);
 
-  const routes = (
-    <Suspense fallback={<RouteFallback />}>
-      <AppRoutes />
-    </Suspense>
-  );
-
-  if (!helmetActive) {
-    return routes;
-  }
-
   return (
-    <Suspense fallback={<RouteFallback />}>
-      <HelmetProvider>
-        <AppRoutes />
-      </HelmetProvider>
-    </Suspense>
+    <HelmetProvider>
+      <AppRoutes />
+    </HelmetProvider>
   );
 };
 
@@ -178,7 +155,7 @@ function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
-      <AppWithOptionalHelmet />
+      <AppShell />
     </BrowserRouter>
   );
 }
