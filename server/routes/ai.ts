@@ -4,11 +4,13 @@ import { authenticateToken } from '../middleware/auth';
 import { generateBlogDraft, listPracticeAreasForApi, regeneratePostCover, rewriteBlogDraft } from '../services/blogAgent';
 import { getChatModel } from '../services/aiModel';
 import { buildRouterAiHttpError, requireRouterAiApiKey } from '../services/routerAiKey';
+import { normalizeAiOptimizedText } from '../utils/normalizeAiOptimizedText';
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
 const DEFAULT_PROMPT = "Оптимизируй следующий текст для юридического портфолио, сделай его профессиональным, лаконичным и грамотным:\n\n{text}";
+const OPTIMIZED_TEXT_FORMAT_RULES = "\n\nВерни только готовый текст без markdown, без заголовков вроде «Итог дела» или «Суть дела», без списков и без пояснений от себя.";
 
 router.post('/optimize', authenticateToken, async (req, res) => {
   try {
@@ -23,7 +25,7 @@ router.post('/optimize', authenticateToken, async (req, res) => {
     });
     
     const template = setting?.value || DEFAULT_PROMPT;
-    const prompt = template.replace('{text}', text);
+    const prompt = `${template.replace('{text}', text)}${OPTIMIZED_TEXT_FORMAT_RULES}`;
 
     const apiKey = requireRouterAiApiKey();
 
@@ -66,7 +68,7 @@ router.post('/optimize', authenticateToken, async (req, res) => {
       return res.status(500).json({ error: 'Пустой ответ от ИИ' });
     }
 
-    res.json({ optimizedText });
+    res.json({ optimizedText: normalizeAiOptimizedText(optimizedText) });
   } catch (error: any) {
     console.error('AI Optimization Error:', error);
     if (error.name === 'AbortError') {
